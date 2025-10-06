@@ -2,11 +2,10 @@
 <project version="4">
   <component name="BackendCodeEditorMiscSettings">
     <option name="/Default/Housekeeping/FeatureSuggestion/FeatureSuggestionManager/DisabledSuggesters/=SwitchToGoToActionSuggester/@EntryIndexedValue" value="true" type="bool" />
+    <option name="/Default/Housekeeping/GlobalSettingsUpgraded/IsUpgraded/@EntryValue" value="true" type="bool" />
   </component>
   <component name="ChangeListManager">
     <list default="true" id="886da941-1996-437c-97fe-48f10748fc3d" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/../include/grandentier.h" beforeDir="false" afterPath="$PROJECT_DIR$/../include/grandentier.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/grandentier.c" beforeDir="false" afterPath="$PROJECT_DIR$/grandentier.c" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.c" beforeDir="false" afterPath="$PROJECT_DIR$/main.c" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -26,6 +25,10 @@
     <option name="minorVersion" value="2.1" />
     <option name="productBranch" value="Classic" />
   </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "customColor": "",
+  "associatedIndex": 1
+}]]></component>
   <component name="ProjectId" id="33glibuBScuN4t5I4MH8YgKpa9V" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
@@ -37,10 +40,11 @@
     "RunOnceActivity.RadMigrateCodeStyle": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.cidr.known.project.marker": "true",
+    "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.readMode.enableVisualFormatting": "true",
     "cf.first.check.clang-format": "false",
     "cidr.known.project.marker": "true",
-    "git-widget-placeholder": "main",
+    "git-widget-placeholder": "Branche__de__Liza",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
@@ -60,6 +64,7 @@
       <option name="presentableId" value="Default" />
       <updated>1759746729507</updated>
       <workItem from="1759746737594" duration="31000" />
+      <workItem from="1759748411363" duration="85000" />
     </task>
     <servers />
   </component>

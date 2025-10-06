@@ -8,7 +8,7 @@ int main() {
     int valide = 0;
 
     while (!valide) {
-        printf("Entrez un nombre (entier, positif ou negatif) : ");
+        printf("Entrez le nombre (entier, positif ou negatif) : ");
         if (scanf("%2047s", saisie) != 1) {
             printf(" Erreur de lecture. Reessayez.\n");
             // vider le buffer au cas où
