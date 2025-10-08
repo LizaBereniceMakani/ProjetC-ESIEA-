@@ -1,6 +1,6 @@
 #include "../include/grandentier.h"
 
-// Convertir une chaîne décimale en binaire
+// ==================== Création depuis décimal ====================
 Grandentier* ge_creer(const char *str) {
     if (!str) return NULL;
 
@@ -14,6 +14,7 @@ Grandentier* ge_creer(const char *str) {
         start = 1;
     } else {
         g->Signe = 1;
+        if (str[0] == '+') start = 1;
     }
 
     // Cas du zéro
@@ -29,11 +30,11 @@ Grandentier* ge_creer(const char *str) {
     char *temp = strdup(str + start);
     int len = strlen(temp);
 
-    // On va diviser le nombre décimal par 2 jusqu’à 0
     int capacity = len * 4;
     int *bits = malloc(capacity * sizeof(int));
     int bitCount = 0;
 
+    // Conversion décimal -> binaire
     while (!(len == 1 && temp[0] == '0')) {
         int carry = 0;
         for (int i = 0; i < len; i++) {
@@ -43,14 +44,12 @@ Grandentier* ge_creer(const char *str) {
         }
         bits[bitCount++] = carry;
 
-        // Supprimer les zéros de tête
         while (len > 1 && temp[0] == '0') {
             temp++;
             len--;
         }
     }
 
-    // Inverser l’ordre pour avoir le bit de poids fort en premier
     g->Taille = bitCount;
     g->Tdigts = malloc(g->Taille * sizeof(int));
     for (int i = 0; i < g->Taille; i++) {
@@ -58,36 +57,66 @@ Grandentier* ge_creer(const char *str) {
     }
 
     free(bits);
-    free(strdup(str + start)); // libère la copie initiale
-
+    free(strdup(str + start));
     return g;
 }
 
-// Afficher le GrandEntier en binaire
+// ==================== Création depuis binaire ====================
+Grandentier* ge_creer_from_binary(const char *str) {
+    if (!str) return NULL;
+
+    Grandentier *g = malloc(sizeof(Grandentier));
+    if (!g) return NULL;
+
+    int len = strlen(str);
+    g->Tdigts = malloc(len * sizeof(int));
+    if (!g->Tdigts) {
+        free(g);
+        return NULL;
+    }
+
+    int isZero = 1;
+    for (int i = 0; i < len; i++) {
+        if (str[i] == '0') g->Tdigts[i] = 0;
+        else if (str[i] == '1') {
+            g->Tdigts[i] = 1;
+            isZero = 0;
+        } else {
+            // caractère invalide -> libération et erreur
+            free(g->Tdigts);
+            free(g);
+            return NULL;
+        }
+    }
+
+    g->Taille = len;
+    g->Signe = isZero ? 0 : 1;
+    return g;
+}
+
+// ==================== Affichage ====================
 void ge_afficher(const Grandentier *g) {
     if (!g) return;
-
     if (g->Signe == 0) {
         printf("0\n");
         return;
     }
-
     if (g->Signe == -1) printf("-");
-
-    for (int i = 0; i < g->Taille; i++) {
-        printf("%d", g->Tdigts[i]);
-    }
+    for (int i = 0; i < g->Taille; i++) printf("%d", g->Tdigts[i]);
     printf("\n");
 }
 
 void ge_afficher_taille(const Grandentier *g) {
+    if (!g) return;
     printf("%d bits\n", g->Taille);
 }
 
 void ge_afficher_signe(const Grandentier *g) {
+    if (!g) return;
     printf("Signe: %d\n", g->Signe);
 }
 
+// ==================== Libération ====================
 void ge_liberer(Grandentier *g) {
     if (g) {
         free(g->Tdigts);

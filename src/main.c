@@ -5,54 +5,74 @@
 
 int main() {
     char saisie[2048];
+    char type;
     int valide = 0;
 
+    // Choix du type de saisie
+    while (1) {
+        printf("Voulez-vous entrer un nombre decimal (d) ou binaire (b) ? ");
+        if (scanf(" %c", &type) != 1) continue;
+        if (type == 'd' || type == 'D' || type == 'b' || type == 'B') break;
+        printf(" Votre choix est invalide, vous devez taper 'd' pour decimal ou 'b' pour binaire.\n");
+    }
+
+    // Lecture et vérification de la saisie
     while (!valide) {
-        printf("Entrez le nombre (entier, positif ou negatif) : ");
+        if (type == 'd' || type == 'D') {
+            printf("Entrez un nombre decimal (entier, positif ou negatif) svp : ");
+        } else {
+            printf("Entrez un nombre binaire (suite de 0 et 1) svp : ");
+        }
+
         if (scanf("%2047s", saisie) != 1) {
-            printf(" Erreur de lecture. Reessayez.\n");
-            // vider le buffer au cas où
-            int c;
-            while ((c = getchar()) != '\n' && c != EOF);
+            printf("Erreur de lecture. Veuillez Reessayez svp :\n");
+            int c; while ((c = getchar()) != '\n' && c != EOF);
             continue;
         }
 
-        int i = 0;
-        if (saisie[0] == '-' || saisie[0] == '+') i = 1;
-
+        // Vérification selon le type
         valide = 1;
-        for (; saisie[i] != '\0'; i++) {
-            if (!isdigit((unsigned char)saisie[i])) {
-                printf(" Saisie invalide : '%s' n'est pas un nombre entier.\n", saisie);
-                valide = 0;
-                break;
+        if (type == 'd' || type == 'D') {
+            int i = 0;
+            if (saisie[0] == '-' || saisie[0] == '+') i = 1;
+            for (; saisie[i] != '\0'; i++) {
+                if (!isdigit((unsigned char)saisie[i])) {
+                    printf(" votre saisie est invalide : '%s' n'est pas un entier.\n", saisie);
+                    valide = 0;
+                    break;
+                }
             }
-        }
-
-        if (!valide) continue;
-
-        // Vérifier qu’il ne s’agit pas juste d’un signe sans chiffre
-
-        if (strlen(saisie) == 1 && (saisie[0] == '-' || saisie[0] == '+')) {
-            printf(" Vous devez entrer au moins un chiffre apres le signe.\n");
-            valide = 0;
+            if (strlen(saisie) == 1 && (saisie[0] == '-' || saisie[0] == '+')) valide = 0;
+        } else {
+            for (int i = 0; saisie[i] != '\0'; i++) {
+                if (saisie[i] != '0' && saisie[i] != '1') {
+                    printf(" votre saisie est invalide : '%s' n'est pas une suite binaire.\n", saisie);
+                    valide = 0;
+                    break;
+                }
+            }
         }
     }
 
-    // Création et affichage du GrandEntier
-    Grandentier *g = ge_creer(saisie);
+    // Création du GrandEntier selon le type
+    Grandentier *g = NULL;
+    if (type == 'd' || type == 'D') {
+        g = ge_creer(saisie);
+    } else {
+        g = ge_creer_from_binary(saisie);
+    }
+
     if (!g) {
-        printf(" Erreur lors de la creation du GrandEntier.\n");
+        printf("❌ Erreur lors de la création du Grandentier\n");
         return 1;
     }
 
+    // Affichage
     printf("\n Resultat :\n");
-    printf("Representation binaire : ");
+    printf(" La representation binaire : ");
     ge_afficher(g);
-
     printf("Taille : ");
     ge_afficher_taille(g);
-
     ge_afficher_signe(g);
 
     ge_liberer(g);
