@@ -27,5 +27,9 @@ void ge_afficher_taille(const Grandentier *g);
 void ge_afficher_signe(const Grandentier *g);
 void ge_liberer(Grandentier *g);
 
+// FONCTIONS SOUSTRACTION & DIVISION
+Grandentier* add_GrandEntier(const Grandentier *a, const Grandentier *b);
+Grandentier* sous_GrandEntier(const Grandentier *a, const Grandentier *b);
+
 #endif //PROJECT_C_ESIEA__GRANDENTIER_H
 
