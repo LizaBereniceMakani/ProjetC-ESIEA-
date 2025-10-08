@@ -10,18 +10,18 @@
 #define BASE 2
 
 typedef struct {
-    int *Tdigts;  // Tableau de bits
-    int Taille;   // Nombre de bits
-    int Signe;    // 1 = positif, -1 = négatif, 0 = zéro
+    int *Tdigts;
+    int Taille;
+    int Signe;
 } Grandentier;
 
-// Créer un Grandentier à partir d'une chaîne décimale
+// Fonction qui créée un Grandentier à partir d'une chaîne décimale
 Grandentier* ge_creer(const char *str);
 
-// Créer un Grandentier directement à partir d'une chaîne binaire
+// Fonction qui créée un Grandentier directement à partir d'une chaîne binaire
 Grandentier* ge_creer_from_binary(const char *str);
 
-// Affichage et gestion
+// Les entetes de toutes nos fonctions
 void ge_afficher(const Grandentier *g);
 void ge_afficher_taille(const Grandentier *g);
 void ge_afficher_signe(const Grandentier *g);

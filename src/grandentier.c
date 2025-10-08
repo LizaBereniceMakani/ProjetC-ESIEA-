@@ -1,6 +1,6 @@
 #include "../include/grandentier.h"
 
-// ==================== Création depuis décimal ====================
+// Fonction qui créée un Grandentier depuis un décimal
 Grandentier* ge_creer(const char *str) {
     if (!str) return NULL;
 
@@ -34,7 +34,7 @@ Grandentier* ge_creer(const char *str) {
     int *bits = malloc(capacity * sizeof(int));
     int bitCount = 0;
 
-    // Conversion décimal -> binaire
+    // Conversion décimal à binaire
     while (!(len == 1 && temp[0] == '0')) {
         int carry = 0;
         for (int i = 0; i < len; i++) {
@@ -61,7 +61,7 @@ Grandentier* ge_creer(const char *str) {
     return g;
 }
 
-// ==================== Création depuis binaire ====================
+// Fonctio qui créée un entier depuis une chaine binaire
 Grandentier* ge_creer_from_binary(const char *str) {
     if (!str) return NULL;
 
@@ -82,7 +82,7 @@ Grandentier* ge_creer_from_binary(const char *str) {
             g->Tdigts[i] = 1;
             isZero = 0;
         } else {
-            // caractère invalide -> libération et erreur
+            // caractère invalide qui entraine la libération et une erreur
             free(g->Tdigts);
             free(g);
             return NULL;
@@ -94,7 +94,7 @@ Grandentier* ge_creer_from_binary(const char *str) {
     return g;
 }
 
-// ==================== Affichage ====================
+// Les fonctions qui affichent notre Grandentier
 void ge_afficher(const Grandentier *g) {
     if (!g) return;
     if (g->Signe == 0) {
@@ -116,7 +116,7 @@ void ge_afficher_signe(const Grandentier *g) {
     printf("Signe: %d\n", g->Signe);
 }
 
-// ==================== Libération ====================
+// Libération de la mémoire
 void ge_liberer(Grandentier *g) {
     if (g) {
         free(g->Tdigts);

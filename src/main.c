@@ -10,7 +10,7 @@ int main() {
 
     // Choix du type de saisie
     while (1) {
-        printf("Voulez-vous entrer un nombre decimal (d) ou binaire (b) ? ");
+        printf("Voulez-vous entrer un nombre decimal (taper 'd') ou un nombre binaire (taper 'b') ? ");
         if (scanf(" %c", &type) != 1) continue;
         if (type == 'd' || type == 'D' || type == 'b' || type == 'B') break;
         printf(" Votre choix est invalide, vous devez taper 'd' pour decimal ou 'b' pour binaire.\n");
@@ -25,7 +25,7 @@ int main() {
         }
 
         if (scanf("%2047s", saisie) != 1) {
-            printf("Erreur de lecture. Veuillez Reessayez svp :\n");
+            printf("Erreur de lecture. Veuillez reessayez svp :\n");
             int c; while ((c = getchar()) != '\n' && c != EOF);
             continue;
         }
@@ -54,7 +54,7 @@ int main() {
         }
     }
 
-    // Création du GrandEntier selon le type
+    // Création du Grandentier selon le type
     Grandentier *g = NULL;
     if (type == 'd' || type == 'D') {
         g = ge_creer(saisie);
@@ -63,12 +63,12 @@ int main() {
     }
 
     if (!g) {
-        printf("❌ Erreur lors de la création du Grandentier\n");
+        printf(" Il y'a eu une erreur lors de la creation du Grandentier\n");
         return 1;
     }
 
     // Affichage
-    printf("\n Resultat :\n");
+    printf("\n Votre Grandentier est :\n");
     printf(" La representation binaire : ");
     ge_afficher(g);
     printf("Taille : ");
