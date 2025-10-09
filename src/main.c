@@ -54,5 +54,55 @@ int main() {
         }
     }
 
+    // Création du Grandentier selon le type
+    Grandentier *g = NULL;
+    if (type == 'd' || type == 'D') {
+        g = ge_creer(saisie);
+    } else {
+        g = ge_creer_from_binary(saisie);
+    }
+
+    if (!g) {
+        printf(" Il y'a eu une erreur lors de la creation du Grandentier\n");
+        return 1;
+    }
+
+    // Affichage
+    printf("\n Votre Grandentier est :\n");
+    printf(" La representation binaire : ");
+    ge_afficher(g);
+    printf("Taille : ");
+    ge_afficher_taille(g);
+    ge_afficher_signe(g);
+
+    // TEST DES NOUVELLES FONCTIONS
+    printf("\n--- TESTS DES OPERATIONS ---\n");
+
+    // Créer un deuxième nombre pour tester les opérations
+    Grandentier* test_num = ge_creer("5");
+    if (test_num) {
+        printf("Nombre de test (5): ");
+        ge_afficher(test_num);
+
+        // Test addition
+        Grandentier* somme = add_GrandEntier(g, test_num);
+        if (somme) {
+            printf("Addition avec 5: ");
+            ge_afficher(somme);
+            ge_liberer(somme);
+        }
+
+        // Test soustraction
+        Grandentier* difference = sous_GrandEntier(g, test_num);
+        if (difference) {
+            printf("Soustraction avec 5: ");
+            ge_afficher(difference);
+            ge_liberer(difference);
+        }
+
+        ge_liberer(test_num);
+    }
+
+    ge_liberer(g);
     return 0;
 }
