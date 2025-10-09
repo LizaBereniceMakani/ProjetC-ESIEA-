@@ -75,34 +75,4 @@ int main() {
     ge_afficher_taille(g);
     ge_afficher_signe(g);
 
-    // TEST DES NOUVELLES FONCTIONS
-    printf("\n--- TESTS DES OPERATIONS ---\n");
-
-    // Créer un deuxième nombre pour tester les opérations
-    Grandentier* test_num = ge_creer("5");
-    if (test_num) {
-        printf("Nombre de test (5): ");
-        ge_afficher(test_num);
-
-        // Test addition
-        Grandentier* somme = add_GrandEntier(g, test_num);
-        if (somme) {
-            printf("Addition avec 5: ");
-            ge_afficher(somme);
-            ge_liberer(somme);
-        }
-
-        // Test soustraction
-        Grandentier* difference = sous_GrandEntier(g, test_num);
-        if (difference) {
-            printf("Soustraction avec 5: ");
-            ge_afficher(difference);
-            ge_liberer(difference);
-        }
-
-        ge_liberer(test_num);
-    }
-
-    ge_liberer(g);
-    return 0;
 }
