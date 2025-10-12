@@ -123,3 +123,119 @@ void ge_liberer(Grandentier *g) {
         free(g);
     }
 }
+
+
+// FONCTION D'AIDE - Comparaison de valeurs absolues (static pour usage interne)
+static int ge_compare_abs(const Grandentier *a, const Grandentier *b) {
+    if (!a || !b) return 0;
+
+    // Si un nombre est zéro
+    if (a->Signe == 0 && b->Signe == 0) return 0;
+    if (a->Signe == 0) return -1;
+    if (b->Signe == 0) return 1;
+
+    // Comparaison par taille
+    if (a->Taille > b->Taille) return 1;
+    if (a->Taille < b->Taille) return -1;
+
+    // Même taille, comparer bit par bit (du plus significatif au moins significatif)
+    for (int i = 0; i < a->Taille; i++) {
+        if (a->Tdigts[i] > b->Tdigts[i]) return 1;
+        if (a->Tdigts[i] < b->Tdigts[i]) return -1;
+    }
+
+    return 0; // Égaux
+}
+
+// FONCTION DE DIVISION
+Grandentier* div_GrandEntier(const Grandentier *a, const Grandentier *b) {
+    if (!a || !b) return NULL;
+
+    // Division par zéro
+    if (b->Signe == 0) {
+        printf("Erreur: Division par zéro!\n");
+        return NULL;
+    }
+
+    // Dividende = 0
+    if (a->Signe == 0) {
+        return ge_creer("0");
+    }
+
+    // Travailler avec des copies pour ne pas modifier les originaux
+    Grandentier *dividende = ge_copier(a);
+    Grandentier *diviseur = ge_copier(b);
+
+    if (!dividende || !diviseur) {
+        if (dividende) ge_liberer(dividende);
+        if (diviseur) ge_liberer(diviseur);
+        return NULL;
+    }
+
+    // Travailler en valeur absolue
+    dividende->Signe = 1;
+    diviseur->Signe = 1;
+
+    // Si diviseur > dividende, résultat = 0
+    if (ge_compare_abs(diviseur, dividende) > 0) {
+        ge_liberer(dividende);
+        ge_liberer(diviseur);
+        return ge_creer("0");
+    }
+
+    // Initialiser le quotient à 0
+    Grandentier *quotient = ge_creer("0");
+    Grandentier *un = ge_creer("1");
+
+    if (!quotient || !un) {
+        if (quotient) ge_liberer(quotient);
+        if (un) ge_liberer(un);
+        ge_liberer(dividende);
+        ge_liberer(diviseur);
+        return NULL;
+    }
+
+    // Algorithme de division par soustractions successives
+    Grandentier *reste = ge_copier(dividende);
+
+    while (reste && ge_compare_abs(reste, diviseur) >= 0) {
+        // Soustraire le diviseur du reste
+        Grandentier *nouveau_reste = sous_GrandEntier(reste, diviseur);
+        if (!nouveau_reste) break;
+
+        // Incrémenter le quotient
+        Grandentier *nouveau_quotient = add_GrandEntier(quotient, un);
+        if (!nouveau_quotient) {
+            ge_liberer(nouveau_reste);
+            break;
+        }
+
+        ge_liberer(reste);
+        ge_liberer(quotient);
+
+        reste = nouveau_reste;
+        quotient = nouveau_quotient;
+    }
+
+    // Déterminer le signe du résultat
+    if (quotient) {
+        if (a->Signe != b->Signe) {
+            quotient->Signe = -1;
+        } else {
+            quotient->Signe = 1;
+        }
+    }
+
+    // Nettoyer la mémoire
+    ge_liberer(dividende);
+    ge_liberer(diviseur);
+    ge_liberer(un);
+    if (reste) ge_liberer(reste);
+
+    return quotient;
+}
+
+// [Le reste de votre code existant reste inchangé...]
+
+
+// Les autres fonctions existantes...

@@ -1,12 +1,25 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdlib.h>
 #include "../include/grandentier.h"
 
-int main() {
+void afficher_menu() {
+    printf("\n=== MENU DES OPERATIONS ===\n");
+    printf("1. Addition\n");
+    printf("2. Soustraction\n");
+    printf("3. Division\n");
+    printf("4. Toutes les operations\n");
+    printf("5. Quitter\n");
+    printf("Choix : ");
+}
+
+Grandentier* saisir_grandentier(const char* message) {
     char saisie[2048];
     char type;
     int valide = 0;
+
+    printf("\n%s\n", message);
 
     // Choix du type de saisie
     while (1) {
@@ -64,15 +77,86 @@ int main() {
 
     if (!g) {
         printf(" Il y'a eu une erreur lors de la creation du Grandentier\n");
-        return 1;
+        return NULL;
     }
 
-    // Affichage
-    printf("\n Votre Grandentier est :\n");
-    printf(" La representation binaire : ");
+    return g;
+}
+
+void afficher_grandentier_details(const Grandentier* g, const char* nom) {
+    if (!g) return;
+    printf("\n--- %s ---\n", nom);
+    printf("Representation binaire : ");
     ge_afficher(g);
     printf("Taille : ");
     ge_afficher_taille(g);
     ge_afficher_signe(g);
+}
+#include "../include/grandentier.h"
+
+int main() {
+    printf("=== Test de la bibliothèque GrandEntier ===\n\n");
+
+    // Test création et affichage
+    printf("1. Test création:\n");
+    Grandentier *a = ge_creer("15");
+    Grandentier *b = ge_creer("4");
+
+    printf("a = "); ge_afficher(a);
+    printf("b = "); ge_afficher(b);
+    printf("\n");
+
+    // Test addition
+    printf("2. Test addition:\n");
+    Grandentier *somme = add_GrandEntier(a, b);
+    printf("a + b = "); ge_afficher(somme);
+    printf("\n");
+
+    // Test soustraction
+    printf("3. Test soustraction:\n");
+    Grandentier *difference = sous_GrandEntier(a, b);
+    printf("a - b = "); ge_afficher(difference);
+    printf("\n");
+
+    // Test division
+    printf("4. Test division:\n");
+    Grandentier *quotient = div_GrandEntier(a, b);
+    printf("a / b = "); ge_afficher(quotient);
+    printf("\n");
+
+    // Test avec nombres négatifs
+    printf("5. Test avec nombres négatifs:\n");
+    Grandentier *c = ge_creer("-10");
+    Grandentier *d = ge_creer("3");
+
+    printf("c = "); ge_afficher(c);
+    printf("d = "); ge_afficher(d);
+
+    Grandentier *div_neg = div_GrandEntier(c, d);
+    printf("c / d = "); ge_afficher(div_neg);
+    printf("\n");
+
+    // Test division par zéro
+    printf("6. Test division par zéro:\n");
+    Grandentier *zero = ge_creer("0");
+    Grandentier *div_zero = div_GrandEntier(a, zero);
+    if (!div_zero) {
+        printf("Division par zéro correctement gérée!\n");
+    }
+
+    // Nettoyage de la mémoire
+    ge_liberer(a);
+    ge_liberer(b);
+    ge_liberer(somme);
+    ge_liberer(difference);
+    ge_liberer(quotient);
+    ge_liberer(c);
+    ge_liberer(d);
+    ge_liberer(div_neg);
+    ge_liberer(zero);
+
+    printf("\n=== Tous les tests sont terminés ===\n");
+
+    return 0;
 
 }
