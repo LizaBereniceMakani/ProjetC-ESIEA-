@@ -1,80 +1,136 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
 #include "../include/grandentier.h"
 
-int main() {
-    char saisie[2048];
-    char type;
-    int valide = 0;
-
-    // Choix du type de saisie
+// Fonction pour saisir un Grandentier (détection automatique)
+Grandentier* saisir_grandentier(const char* prompt) {
+    char input[256];
     while (1) {
-        printf("Voulez-vous entrer un nombre decimal (taper 'd') ou un nombre binaire (taper 'b') ? ");
-        if (scanf(" %c", &type) != 1) continue;
-        if (type == 'd' || type == 'D' || type == 'b' || type == 'B') break;
-        printf(" Votre choix est invalide, vous devez taper 'd' pour decimal ou 'b' pour binaire.\n");
-    }
-
-    // Lecture et vérification de la saisie
-    while (!valide) {
-        if (type == 'd' || type == 'D') {
-            printf("Entrez un nombre decimal (entier, positif ou negatif) svp : ");
-        } else {
-            printf("Entrez un nombre binaire (suite de 0 et 1) svp : ");
-        }
-
-        if (scanf("%2047s", saisie) != 1) {
-            printf("Erreur de lecture. Veuillez reessayez svp :\n");
-            int c; while ((c = getchar()) != '\n' && c != EOF);
+        printf("%s", prompt);
+        if (!fgets(input, sizeof(input), stdin)) continue;
+        input[strcspn(input, "\n")] = 0; // enlever le \n
+        Grandentier* g = ge_creer_auto(input);
+        if (!g) {
+            printf("Saisie invalide. Essayez de nouveau.\n");
             continue;
         }
-
-        // Vérification selon le type
-        valide = 1;
-        if (type == 'd' || type == 'D') {
-            int i = 0;
-            if (saisie[0] == '-' || saisie[0] == '+') i = 1;
-            for (; saisie[i] != '\0'; i++) {
-                if (!isdigit((unsigned char)saisie[i])) {
-                    printf(" votre saisie est invalide : '%s' n'est pas un entier.\n", saisie);
-                    valide = 0;
-                    break;
-                }
-            }
-            if (strlen(saisie) == 1 && (saisie[0] == '-' || saisie[0] == '+')) valide = 0;
-        } else {
-            for (int i = 0; saisie[i] != '\0'; i++) {
-                if (saisie[i] != '0' && saisie[i] != '1') {
-                    printf(" votre saisie est invalide : '%s' n'est pas une suite binaire.\n", saisie);
-                    valide = 0;
-                    break;
-                }
-            }
-        }
+        return g;
     }
+}
 
-    // Création du Grandentier selon le type
-    Grandentier *g = NULL;
-    if (type == 'd' || type == 'D') {
-        g = ge_creer(saisie);
-    } else {
-        g = ge_creer_from_binary(saisie);
-    }
-
-    if (!g) {
-        printf(" Il y'a eu une erreur lors de la creation du Grandentier\n");
-        return 1;
-    }
-
-    // Affichage
-    printf("\n Votre Grandentier est :\n");
-    printf(" La representation binaire : ");
+// Afficher un Grandentier
+void afficher_grandentier(Grandentier* g) {
+    if (!g) return;
+    printf("\nNombre : ");
     ge_afficher(g);
-    printf("Taille : ");
     ge_afficher_taille(g);
     ge_afficher_signe(g);
+}
 
-    ge_liberer(g);
+// Fonction pour demander création spécifique (cas menu 1)
+Grandentier* saisir_grandentier_menu1() {
+    char choix;
+    while (1) {
+        printf("Comment voulez-vous creer le nombre ? b = binaire, d = decimal, p = base^expo\nVotre choix : ");
+        if (scanf(" %c", &choix) != 1) continue;
+        while (getchar() != '\n'); // vider le buffer
+        if (choix=='b'||choix=='B'||choix=='d'||choix=='D'||choix=='p'||choix=='P') break;
+        printf("Saisie invalide.\n");
+    }
+
+    char input[256];
+    printf("Entrez la valeur : ");
+    if (!fgets(input, sizeof(input), stdin)) return NULL;
+    input[strcspn(input, "\n")] = 0;
+
+    switch (choix) {
+        case 'b': case 'B': return ge_creer_from_binary(input);
+        case 'd': case 'D': return ge_creer(input);
+        case 'p': case 'P': return ge_creer_puissance(input);
+        default: return NULL;
+    }
+}
+
+int main() {
+    int choix;
+    do {
+        printf("\n--- Menu Principal ---\n");
+        printf("1. Creer et afficher un Grandentier\n");
+        printf("2. Additionner deux Grandentiers\n");
+        printf("3. Soustraire deux Grandentiers\n");
+        printf("4. Comparer deux Grandentiers\n");
+        printf("5. Multiplier deux Grandentiers\n");
+        printf("6. Diviser deux Grandentiers\n");
+        printf("7. Quitter\n");
+        printf("Votre choix : ");
+
+        if (scanf("%d", &choix)!=1) { while(getchar()!='\n'); continue; }
+        while(getchar()!='\n');
+
+        switch (choix) {
+            case 1: {
+                Grandentier* g = saisir_grandentier_menu1();
+                if (!g) { printf("Erreur de création.\n"); break; }
+                afficher_grandentier(g);
+                ge_liberer(g);
+                break;
+            }
+            case 2: {
+                Grandentier* a = saisir_grandentier("Premier nombre : ");
+                Grandentier* b = saisir_grandentier("Deuxieme nombre : ");
+                Grandentier* res = add_GrandEntier(a,b);
+                printf("\nResultat de l'addition :");
+                afficher_grandentier(res);
+                ge_liberer(a); ge_liberer(b); ge_liberer(res);
+                break;
+            }
+            case 3: {
+                Grandentier* a = saisir_grandentier("Premier nombre : ");
+                Grandentier* b = saisir_grandentier("Deuxieme nombre : ");
+                Grandentier* res = sous_GrandEntier(a,b);
+                printf("\nResultat de la soustraction :");
+                afficher_grandentier(res);
+                ge_liberer(a); ge_liberer(b); ge_liberer(res);
+                break;
+            }
+            case 4: {
+                Grandentier* a = saisir_grandentier("Premier nombre : ");
+                Grandentier* b = saisir_grandentier("Deuxieme nombre : ");
+                int cmp = cmp_GrandEntier(a,b);
+                if(cmp==0) printf("\nLes nombres sont egaux.\n");
+                else if(cmp>0) printf("\nLe premier nombre est plus grand.\n");
+                else printf("\nLe deuxieme nombre est plus grand.\n");
+                ge_liberer(a); ge_liberer(b);
+                break;
+            }
+            case 5: {
+                Grandentier* a = saisir_grandentier("Premier nombre : ");
+                Grandentier* b = saisir_grandentier("Deuxieme nombre : ");
+                Grandentier* res = mul_GrandEntier(a,b);
+                printf("\nResultat de la multiplication :");
+                afficher_grandentier(res);
+                ge_liberer(a); ge_liberer(b); ge_liberer(res);
+                break;
+            }
+            case 6: {
+                Grandentier* a = saisir_grandentier("Premier nombre : ");
+                Grandentier* b = saisir_grandentier("Deuxieme nombre : ");
+                Grandentier* res = div_GrandEntier(a,b);
+                if(res) {
+                    printf("\nResultat de la division :");
+                    afficher_grandentier(res);
+                    ge_liberer(res);
+                } else {
+                    printf("Division non supportee.\n");
+                }
+                ge_liberer(a); ge_liberer(b);
+                break;
+            }
+            case 7: printf("Au revoir !\n"); break;
+            default: printf("Choix invalide.\n");
+        }
+    } while(choix!=7);
+
     return 0;
 }
