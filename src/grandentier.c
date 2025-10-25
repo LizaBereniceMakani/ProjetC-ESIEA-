@@ -195,6 +195,19 @@ Grandentier* div_GrandEntier(const Grandentier *a,const Grandentier *b){
     return NULL;
 }
 
+Grandentier* Grandentier_mod(const Grandentier* A, const Grandentier* B) {
+    if (!A || !B) return NULL;
+    if (B->Taille == 1 && B->Tdigts[0] == 0) return NULL; // division par zéro
+    Grandentier* reste = ge_copier(A);
+    while(cmp_GrandEntier(reste, B) >= 0) {
+        Grandentier* temp = reste;
+        reste = sous_GrandEntier(reste, B);
+        ge_liberer(temp);
+    }
+    return reste;
+}
+
+
 // ---- Comparaison ----
 int cmp_GrandEntier(const Grandentier *a,const Grandentier *b){
     if(!a||!b) return 0;

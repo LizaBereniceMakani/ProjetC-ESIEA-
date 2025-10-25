@@ -1,8 +1,11 @@
-cmake_minimum_required(VERSION 4.0)
-project(Project_C_ESIEA_ C)
+cmake_minimum_required(VERSION 3.20)
+project(ProjetC_ESIEA C)
 
 set(CMAKE_C_STANDARD 11)
 
-add_executable(Project_C_ESIEA_ src/main.c
-        include/grandentier.h
-        src/grandentier.c)
+include_directories(include)
+
+add_executable(ProjetC_ESIEA
+        src/main.c
+        src/grandentier.c
+)

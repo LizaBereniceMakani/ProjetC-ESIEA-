@@ -62,7 +62,8 @@ int main() {
         printf("4. Comparer deux Grandentiers\n");
         printf("5. Multiplier deux Grandentiers\n");
         printf("6. Diviser deux Grandentiers\n");
-        printf("7. Quitter\n");
+        printf("7. Modulo de deux Grandentiers\n");
+        printf("8. Quitter\n");
         printf("Votre choix : ");
 
         if (scanf("%d", &choix)!=1) { while(getchar()!='\n'); continue; }
@@ -127,10 +128,24 @@ int main() {
                 ge_liberer(a); ge_liberer(b);
                 break;
             }
-            case 7: printf("Au revoir !\n"); break;
+            case 7: {  // <-- Option Modulo
+                Grandentier* a = saisir_grandentier("Premier nombre : ");
+                Grandentier* b = saisir_grandentier("Deuxieme nombre : ");
+                Grandentier* res = Grandentier_mod(a,b);
+                if(res) {
+                    printf("\nResultat du modulo :");
+                    afficher_grandentier(res);
+                    ge_liberer(res);
+                } else {
+                    printf("Erreur : division par zero ou operation non supportee.\n");
+                }
+                ge_liberer(a); ge_liberer(b);
+                break;
+            }
+            case 8: printf("Au revoir !\n"); break;
             default: printf("Choix invalide.\n");
         }
-    } while(choix!=7);
+    } while(choix!=8);
 
     return 0;
 }
