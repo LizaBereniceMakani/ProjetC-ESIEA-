@@ -206,3 +206,232 @@ int cmp_GrandEntier(const Grandentier *a,const Grandentier *b){
     }
     return 0;
 }
+
+/*// ---- PGCD ----
+
+  static int ge_est_pair(const Grandentier *g);
+static Grandentier* ge_diviser_par_deux(const Grandentier *g);
+static Grandentier* ge_multiplier_par_deux(const Grandentier *g);
+
+// ---- Fonctions auxiliaires pour le PGCD ----
+static int ge_est_pair(const Grandentier *g) {
+    if (!g || g->Taille == 0) return 1;
+    return g->Tdigts[g->Taille - 1] == 0;
+}
+
+static Grandentier* ge_diviser_par_deux(const Grandentier *g) {
+    if (!g) return NULL;
+    if (g->Signe == 0) return ge_creer("0");
+
+    Grandentier* res = malloc(sizeof(Grandentier));
+    res->Taille = g->Taille;
+    res->Signe = g->Signe;
+    res->Tdigts = malloc(res->Taille * sizeof(int));
+
+    for (int i = 0; i < res->Taille - 1; i++)
+        res->Tdigts[i] = g->Tdigts[i];
+    res->Tdigts[res->Taille - 1] = 0;
+
+    int start = 0;
+    while (start < res->Taille - 1 && res->Tdigts[start] == 0) start++;
+
+    if (start > 0) {
+        int newTaille = res->Taille - start;
+        int* newDigits = malloc(newTaille * sizeof(int));
+        for (int i = 0; i < newTaille; i++)
+            newDigits[i] = res->Tdigts[start + i];
+        free(res->Tdigts);
+        res->Tdigts = newDigits;
+        res->Taille = newTaille;
+    }
+
+    if (res->Taille == 1 && res->Tdigts[0] == 0)
+        res->Signe = 0;
+
+    return res;
+}
+
+static Grandentier* ge_multiplier_par_deux(const Grandentier *g) {
+    if (!g) return NULL;
+    if (g->Signe == 0) return ge_creer("0");
+
+    Grandentier* res = malloc(sizeof(Grandentier));
+    res->Taille = g->Taille + 1;
+    res->Signe = g->Signe;
+    res->Tdigts = calloc(res->Taille, sizeof(int));
+
+    for (int i = 0; i < g->Taille; i++)
+        res->Tdigts[i] = g->Tdigts[i];
+
+    return res;
+}
+
+Grandentier* ge_pgcd(const Grandentier *a, const Grandentier *b) {
+    if (!a || !b) return NULL;
+
+    Grandentier* zero = ge_creer("0");
+    if (cmp_GrandEntier(a, zero) == 0) { ge_liberer(zero); return ge_copier(b); }
+    if (cmp_GrandEntier(b, zero) == 0) { ge_liberer(zero); return ge_copier(a); }
+    ge_liberer(zero);
+
+    Grandentier* u = ge_copier(a);
+    Grandentier* v = ge_copier(b);
+    int k = 0;
+
+    while (ge_est_pair(u) && ge_est_pair(v)) {
+        Grandentier* new_u = ge_diviser_par_deux(u);
+        Grandentier* new_v = ge_diviser_par_deux(v);
+        ge_liberer(u); ge_liberer(v);
+        u = new_u; v = new_v;
+        k++;
+    }
+
+    Grandentier* zero_ref = ge_creer("0");
+    while (v && cmp_GrandEntier(v, zero_ref) != 0) {
+        while (ge_est_pair(v)) {
+            Grandentier* new_v = ge_diviser_par_deux(v);
+            ge_liberer(v);
+            v = new_v;
+        }
+
+        if (cmp_GrandEntier(u, v) > 0) {
+            Grandentier* temp = u; u = v; v = temp;
+        }
+
+        Grandentier* new_v = sous_GrandEntier(v, u);
+        ge_liberer(v);
+        v = new_v;
+    }
+    ge_liberer(zero_ref);
+
+    Grandentier* resultat = ge_copier(u);
+    for (int i = 0; i < k; i++) {
+        Grandentier* new_r = ge_multiplier_par_deux(resultat);
+        ge_liberer(resultat);
+        resultat = new_r;
+    }
+
+    ge_liberer(u);
+    ge_liberer(v);
+    return resultat;
+}*/
+
+// ---- PGCD ----
+
+// Déclarations internes
+static int ge_est_pair(const Grandentier *g);
+static Grandentier* ge_diviser_par_deux(const Grandentier *g);
+static Grandentier* ge_multiplier_par_deux(const Grandentier *g);
+static void ge_normaliser(Grandentier *g);
+
+// Vérifie si le nombre est pair (dernier bit = 0)
+static int ge_est_pair(const Grandentier *g) {
+    if (!g || g->Taille == 0) return 1;
+    return g->Tdigts[g->Taille - 1] == 0;
+}
+
+// Division par deux : on supprime le bit de poids faible
+static Grandentier* ge_diviser_par_deux(const Grandentier *g) {
+    if (!g) return NULL;
+    if (g->Signe == 0 || g->Taille == 0) return ge_creer("0");
+
+    // Si le nombre a un seul bit : 1/2 = 0
+    if (g->Taille == 1) return ge_creer("0");
+
+    Grandentier* res = malloc(sizeof(Grandentier));
+    res->Taille = g->Taille - 1;
+    res->Signe = g->Signe;
+    res->Tdigts = malloc(res->Taille * sizeof(int));
+
+    // On retire le dernier bit
+    for (int i = 0; i < res->Taille; i++)
+        res->Tdigts[i] = g->Tdigts[i];
+
+    // Vérifie si le résultat devient 0
+    int all_zero = 1;
+    for (int i = 0; i < res->Taille; i++) {
+        if (res->Tdigts[i] != 0) { all_zero = 0; break; }
+    }
+    if (all_zero) res->Signe = 0;
+
+    return res;
+}
+
+// Multiplication par deux : décalage à gauche (ajoute un bit 0 à la fin)
+static Grandentier* ge_multiplier_par_deux(const Grandentier *g) {
+    if (!g) return NULL;
+    if (g->Signe == 0) return ge_creer("0");
+
+    Grandentier* res = malloc(sizeof(Grandentier));
+    res->Taille = g->Taille + 1;
+    res->Signe = g->Signe;
+    res->Tdigts = malloc(res->Taille * sizeof(int));
+
+    // Copie des bits existants
+    for (int i = 0; i < g->Taille; i++)
+        res->Tdigts[i] = g->Tdigts[i];
+
+    // Ajoute un bit nul à la fin
+    res->Tdigts[res->Taille - 1] = 0;
+
+    return res;
+}
+
+// ---- Algorithme binaire d’Euclide pour le PGCD ----
+Grandentier* ge_pgcd(const Grandentier *a, const Grandentier *b) {
+    if (!a || !b) return NULL;
+
+    Grandentier* zero = ge_creer("0");
+    if (cmp_GrandEntier(a, zero) == 0) { ge_liberer(zero); return ge_copier(b); }
+    if (cmp_GrandEntier(b, zero) == 0) { ge_liberer(zero); return ge_copier(a); }
+    ge_liberer(zero);
+
+    Grandentier* u = ge_copier(a);
+    Grandentier* v = ge_copier(b);
+    int k = 0;
+
+    // Supprime les facteurs 2 communs
+    while (ge_est_pair(u) && ge_est_pair(v)) {
+        Grandentier* new_u = ge_diviser_par_deux(u);
+        Grandentier* new_v = ge_diviser_par_deux(v);
+        ge_liberer(u); ge_liberer(v);
+        u = new_u; v = new_v;
+        k++;
+    }
+
+    Grandentier* zero_ref = ge_creer("0");
+    while (v && cmp_GrandEntier(v, zero_ref) != 0) {
+        // Enlève les 2 dans v
+        while (v && ge_est_pair(v)) {
+            Grandentier* new_v = ge_diviser_par_deux(v);
+            ge_liberer(v);
+            v = new_v;
+        }
+
+        if (!v) break;
+
+        // Assure que u <= v
+        if (cmp_GrandEntier(u, v) > 0) {
+            Grandentier* temp = u; u = v; v = temp;
+        }
+
+        // v = v - u
+        Grandentier* diff = sous_GrandEntier(v, u);
+        ge_liberer(v);
+        v = diff;
+    }
+    ge_liberer(zero_ref);
+
+    // Remet les 2^k communs
+    Grandentier* resultat = ge_copier(u);
+    for (int i = 0; i < k; i++) {
+        Grandentier* new_r = ge_multiplier_par_deux(resultat);
+        ge_liberer(resultat);
+        resultat = new_r;
+    }
+
+    ge_liberer(u);
+    ge_liberer(v);
+    return resultat;
+}
+

@@ -62,7 +62,8 @@ int main() {
         printf("4. Comparer deux Grandentiers\n");
         printf("5. Multiplier deux Grandentiers\n");
         printf("6. Diviser deux Grandentiers\n");
-        printf("7. Quitter\n");
+        printf("7. Calculer le PGCD de deux Grandentiers\n");
+        printf("8. Quitter\n");
         printf("Votre choix : ");
 
         if (scanf("%d", &choix)!=1) { while(getchar()!='\n'); continue; }
@@ -127,10 +128,46 @@ int main() {
                 ge_liberer(a); ge_liberer(b);
                 break;
             }
-            case 7: printf("Au revoir !\n"); break;
+            case 7: {  // PGCD
+                Grandentier* a = saisir_grandentier("Premier nombre : ");
+                Grandentier* b = saisir_grandentier("Deuxieme nombre : ");
+
+                if (!a || !b) {
+                    printf("Erreur : impossible de lire les deux nombres.\n");
+                    if (a) ge_liberer(a);
+                    if (b) ge_liberer(b);
+                    break;
+                }
+                Grandentier* res = ge_pgcd(a, b);
+                if (res) {
+                    printf("\nPGCD (en binaire) : ");
+                    ge_afficher(res);
+                } else {
+                    printf("\nErreur : le PGCD n’a pas pu être calculé.\n");
+                }
+
+                ge_liberer(a);
+                ge_liberer(b);
+                ge_liberer(res);
+                break;
+            }
+
+                /*Grandentier* res = ge_pgcd(a, b);
+                if (res) {
+                    printf("\nPGCD : ");
+                    ge_afficher(res);
+                    ge_afficher_taille(res);
+                } else {
+                    printf("Erreur : le PGCD n’a pas pu être calculé.\n");
+                }
+
+                ge_liberer(a); ge_liberer(b); ge_liberer(res);
+                break; */
+
+            case 8: printf("Au revoir !\n"); break;
             default: printf("Choix invalide.\n");
         }
-    } while(choix!=7);
+    } while(choix!=8);
 
     return 0;
 }
