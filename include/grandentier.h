@@ -29,7 +29,8 @@ Grandentier* sous_GrandEntier(const Grandentier *a, const Grandentier *b);
 Grandentier* mul_GrandEntier(const Grandentier *a, const Grandentier *b);
 Grandentier* div_GrandEntier(const Grandentier *a, const Grandentier *b);
 Grandentier* Grandentier_mod(const Grandentier* A, const Grandentier* B);
-
+// PGCD - Algorithme binaire d'Euclide
+Grandentier* ge_pgcd(const Grandentier *a, const Grandentier *b);
 
 // Comparaison (-1 si a<b, 0 si a==b, 1 si a>b)
 int cmp_GrandEntier(const Grandentier *a, const Grandentier *b);
