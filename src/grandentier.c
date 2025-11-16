@@ -1,221 +1,303 @@
-#include "../include/grandentier.h"
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <ctype.h>
-
-// ---- Création depuis binaire ----
-Grandentier* ge_creer_from_binary(const char *str) {
-    if (!str) return NULL;
-    size_t len = strlen(str);
-    Grandentier* g = malloc(sizeof(Grandentier));
-    g->Tdigts = malloc(len * sizeof(int));
-    g->Taille = len;
-    g->Signe = 0;
-
-    int allZero = 1;
-    for (size_t i = 0; i < len; i++) {
-        if (str[i] == '0') g->Tdigts[i] = 0;
-        else if (str[i] == '1') { g->Tdigts[i] = 1; allZero = 0; }
-        else { free(g->Tdigts); free(g); return NULL; }
+// ---- Exponentiation modulaire (critique pour RSA) ----
+Grandentier* ge_pow_mod(const Grandentier *base, const Grandentier *exp, const Grandentier *mod) {
+    if (!base || !exp || !mod) return NULL;
+    
+    // Cas particuliers
+    if (exp->Taille == 1 && exp->Tdigts[0] == 0) {
+        return ge_creer("1"); // base^0 = 1
     }
-    if (!allZero) g->Signe = 1;
-    return g;
-}
-
-// ---- Création depuis décimal ----
-Grandentier* ge_creer(const char *str) {
-    if (!str) return NULL;
-    int sign = 1;
-    size_t start = 0;
-    if (str[0] == '-') { sign = -1; start = 1; }
-    else if (str[0] == '+') start = 1;
-
-    if (strcmp(str + start, "0") == 0) {
-        Grandentier* g = malloc(sizeof(Grandentier));
-        g->Taille = 1;
-        g->Tdigts = malloc(sizeof(int));
-        g->Tdigts[0] = 0;
-        g->Signe = 0;
-        return g;
+    if (cmp_GrandEntier(mod, ge_creer("1")) == 0) {
+        return ge_creer("0"); // x mod 1 = 0
     }
-
-    char* temp = strdup(str + start);
-    int capacity = strlen(temp) * 4;
-    int* bits = malloc(capacity * sizeof(int));
-    int bitCount = 0;
-
-    while (strlen(temp) > 0 && strcmp(temp, "0") != 0) {
-        int carry = 0;
-        size_t len = strlen(temp);
-        for (size_t i = 0; i < len; i++) {
-            int cur = carry * 10 + (temp[i] - '0');
-            temp[i] = (cur / 2) + '0';
-            carry = cur % 2;
+    
+    Grandentier *result = ge_creer("1");
+    Grandentier *base_mod = Grandentier_mod(base, mod);
+    Grandentier *exponent = ge_copier(exp);
+    
+    // Exponentiation binaire (méthode square-and-multiply)
+    while (cmp_GrandEntier(exponent, ge_creer("0")) > 0) {
+        // Si l'exposant est impair
+        if (exponent->Tdigts[exponent->Taille - 1] == 1) {
+            Grandentier *temp = mul_GrandEntier(result, base_mod);
+            Grandentier *new_result = Grandentier_mod(temp, mod);
+            ge_liberer(result);
+            ge_liberer(temp);
+            result = new_result;
         }
-        bits[bitCount++] = carry;
-        size_t newStart = 0;
-        while (newStart < len && temp[newStart] == '0') newStart++;
-        if (newStart > 0) memmove(temp, temp+newStart, len-newStart+1);
+        
+        // Carré de la base
+        Grandentier *temp_base = mul_GrandEntier(base_mod, base_mod);
+        Grandentier *new_base = Grandentier_mod(temp_base, mod);
+        ge_liberer(base_mod);
+        ge_liberer(temp_base);
+        base_mod = new_base;
+        
+        // Division de l'exposant par 2 (décalage à droite)
+        Grandentier *new_exp = ge_creer("0");
+        if (exponent->Taille > 1 || exponent->Tdigts[0] > 1) {
+            // Implémentation du décalage à droite
+            int new_size = exponent->Taille;
+            if (exponent->Tdigts[exponent->Taille - 1] == 1 && exponent->Taille > 1) {
+                new_size--;
+            }
+            
+            new_exp->Taille = new_size;
+            new_exp->Tdigts = malloc(new_size * sizeof(int));
+            for (int i = 0; i < new_size; i++) {
+                new_exp->Tdigts[i] = exponent->Tdigts[i];
+            }
+        }
+        ge_liberer(exponent);
+        exponent = new_exp;
     }
-
-    Grandentier* g = malloc(sizeof(Grandentier));
-    g->Taille = bitCount;
-    g->Tdigts = malloc(bitCount * sizeof(int));
-    g->Signe = sign;
-    for (int i = 0; i < bitCount; i++) g->Tdigts[i] = bits[bitCount - 1 - i];
-
-    free(bits); free(temp);
-    return g;
+    
+    ge_liberer(base_mod);
+    ge_liberer(exponent);
+    return result;
 }
 
-// ---- Création depuis base^expo (ex: "2^34") ----
-Grandentier* ge_creer_puissance(const char *str) {
-    int base=0, expo=0;
-    if (sscanf(str, "%d^%d", &base, &expo) != 2) return NULL;
-    if (base != 2 || expo < 0) return NULL;
+// ---- Algorithme d'Euclide étendu (PGCD + coefficients) ----
+typedef struct {
+    Grandentier *gcd;
+    Grandentier *x;
+    Grandentier *y;
+} EuclideResult;
 
-    Grandentier* g = malloc(sizeof(Grandentier));
-    g->Taille = expo + 1;
-    g->Tdigts = calloc(g->Taille, sizeof(int));
-    g->Tdigts[0] = 1;
-    g->Signe = 1;
-    return g;
-}
-
-// ---- Détection automatique ----
-Grandentier* ge_creer_auto(const char *input) {
-    if (strchr(input,'^')) return ge_creer_puissance(input);
-
-    int isBinary = 1;
-    for (size_t i=0;i<strlen(input);i++)
-        if (input[i]!='0' && input[i]!='1') { isBinary=0; break; }
-
-    if (isBinary) return ge_creer_from_binary(input);
-    return ge_creer(input);
-}
-
-// ---- Affichage ----
-void ge_afficher(const Grandentier *g) {
-    if (!g) return;
-    if (g->Signe==0) { printf("0\n"); return; }
-    if (g->Signe==-1) printf("-");
-    for (int i=0;i<g->Taille;i++) printf("%d",g->Tdigts[i]);
-    printf("\n");
-}
-
-void ge_afficher_taille(const Grandentier *g){if(g) printf("%d bits\n",g->Taille);}
-void ge_afficher_signe(const Grandentier *g){if(g) printf("Signe: %d\n",g->Signe);}
-
-// ---- Libération ----
-void ge_liberer(Grandentier *g){if(g){free(g->Tdigts); free(g);}}
-
-// ---- Copier ----
-static Grandentier* ge_copier(const Grandentier *g){
-    if(!g) return NULL;
-    Grandentier* c = malloc(sizeof(Grandentier));
-    c->Taille = g->Taille;
-    c->Signe = g->Signe;
-    c->Tdigts = malloc(c->Taille*sizeof(int));
-    for(int i=0;i<c->Taille;i++) c->Tdigts[i] = g->Tdigts[i];
-    return c;
-}
-
-// ---- Addition ----
-Grandentier* add_GrandEntier(const Grandentier *a,const Grandentier *b){
-    if(!a) return ge_copier(b);
-    if(!b) return ge_copier(a);
-    int taille = (a->Taille>b->Taille?a->Taille:b->Taille)+1;
-    int* resbits = calloc(taille,sizeof(int));
-    for(int i=0;i<a->Taille;i++) resbits[taille - i -1] += a->Tdigts[a->Taille - i -1];
-    for(int i=0;i<b->Taille;i++) resbits[taille - i -1] += b->Tdigts[b->Taille - i -1];
-    for(int i=taille-1;i>0;i--){
-        if(resbits[i]>=2){resbits[i]-=2; resbits[i-1]++;}
+EuclideResult* ge_euclide_etendu(const Grandentier *a, const Grandentier *b) {
+    if (!a || !b) return NULL;
+    
+    EuclideResult *result = malloc(sizeof(EuclideResult));
+    
+    if (cmp_GrandEntier(b, ge_creer("0")) == 0) {
+        result->gcd = ge_copier(a);
+        result->x = ge_creer("1");
+        result->y = ge_creer("0");
+        return result;
     }
-    int start=0; while(start<taille-1 && resbits[start]==0) start++;
-    Grandentier* res=malloc(sizeof(Grandentier));
-    res->Taille = taille - start;
-    res->Tdigts = malloc(res->Taille*sizeof(int));
-    for(int i=0;i<res->Taille;i++) res->Tdigts[i]=resbits[start+i];
-    res->Signe=1;
-    free(resbits);
-    return res;
+    
+    Grandentier *a_mod_b = Grandentier_mod(a, b);
+    EuclideResult *temp = ge_euclide_etendu(b, a_mod_b);
+    
+    // x = ancien y
+    result->x = temp->y;
+    
+    // y = ancien x - (a/b) * ancien y
+    Grandentier *a_div_b = div_GrandEntier(a, b);
+    Grandentier *temp_prod = mul_GrandEntier(a_div_b, temp->y);
+    result->y = sous_GrandEntier(temp->x, temp_prod);
+    
+    result->gcd = temp->gcd;
+    
+    ge_liberer(a_mod_b);
+    ge_liberer(a_div_b);
+    ge_liberer(temp_prod);
+    free(temp);
+    
+    return result;
 }
 
-// ---- Soustraction (binaire simple, a>=b) ----
-Grandentier* sous_GrandEntier(const Grandentier *a,const Grandentier *b){
-    // Complément à 2 simplifié
-    Grandentier* res=ge_copier(a);
-    int borrow=0;
-    for(int i=0;i<res->Taille;i++){
-        int bi=(i<b->Taille)?b->Tdigts[b->Taille-1-i]:0;
-        int ai=res->Tdigts[res->Taille-1-i]-borrow;
-        if(ai<bi){ai+=2; borrow=1;} else borrow=0;
-        res->Tdigts[res->Taille-1-i]=ai-bi;
+// ---- PGCD simple ----
+Grandentier* ge_gcd(const Grandentier *a, const Grandentier *b) {
+    if (!a || !b) return NULL;
+    
+    Grandentier *x = ge_copier(a);
+    Grandentier *y = ge_copier(b);
+    
+    while (cmp_GrandEntier(y, ge_creer("0")) != 0) {
+        Grandentier *temp = y;
+        y = Grandentier_mod(x, y);
+        ge_liberer(x);
+        x = temp;
     }
-    // Normaliser taille
-    int start=0; while(start<res->Taille-1 && res->Tdigts[start]==0) start++;
-    if(start>0){
-        int newT=res->Taille-start;
-        int* newBits=malloc(newT*sizeof(int));
-        for(int i=0;i<newT;i++) newBits[i]=res->Tdigts[start+i];
-        free(res->Tdigts); res->Tdigts=newBits; res->Taille=newT;
-    }
-    return res;
+    
+    ge_liberer(y);
+    return x;
 }
 
-// ---- Multiplication ----
-Grandentier* mul_GrandEntier(const Grandentier *a,const Grandentier *b){
-    if(!a||!b) return NULL;
-    Grandentier* res=ge_creer("0");
-    for(int i=b->Taille-1;i>=0;i--){
-        if(b->Tdigts[i]==1){
-            Grandentier* temp=ge_copier(a);
-            int shift=b->Taille-1-i;
-            Grandentier* shifted=malloc(sizeof(Grandentier));
-            shifted->Taille=temp->Taille+shift;
-            shifted->Tdigts=calloc(shifted->Taille,sizeof(int));
-            for(int j=0;j<temp->Taille;j++)
-                shifted->Tdigts[j]=temp->Tdigts[j];
-            for(int j=0;j<shift;j++) shifted->Tdigts[shifted->Taille-1-j]=0;
-            shifted->Signe=1;
-            Grandentier* sum=add_GrandEntier(res,shifted);
-            ge_liberer(res); ge_liberer(temp); ge_liberer(shifted);
-            res=sum;
+// ---- Inverse modulaire ----
+Grandentier* ge_mod_inverse(const Grandentier *a, const Grandentier *m) {
+    if (!a || !m) return NULL;
+    
+    EuclideResult *euclide = ge_euclide_etendu(a, m);
+    
+    // L'inverse n'existe que si PGCD(a, m) = 1
+    if (cmp_GrandEntier(euclide->gcd, ge_creer("1")) != 0) {
+        ge_liberer(euclide->gcd);
+        ge_liberer(euclide->x);
+        ge_liberer(euclide->y);
+        free(euclide);
+        return NULL; // Pas d'inverse modulaire
+    }
+    
+    // x mod m est l'inverse modulaire
+    Grandentier *inverse = Grandentier_mod(euclide->x, m);
+    
+    // Si négatif, ajouter m
+    if (inverse->Signe == -1) {
+        Grandentier *temp = add_GrandEntier(inverse, m);
+        ge_liberer(inverse);
+        inverse = temp;
+    }
+    
+    ge_liberer(euclide->gcd);
+    ge_liberer(euclide->x);
+    ge_liberer(euclide->y);
+    free(euclide);
+    
+    return inverse;
+}
+
+// ---- Test de primalité (Miller-Rabin simplifié) ----
+int ge_est_probablement_premier(const Grandentier *n, int iterations) {
+    if (!n) return 0;
+    
+    // Petits nombres premiers
+    if (cmp_GrandEntier(n, ge_creer("2")) == 0) return 1;
+    if (cmp_GrandEntier(n, ge_creer("1")) <= 0) return 0;
+    
+    // Nombres pairs
+    if (n->Tdigts[n->Taille - 1] % 2 == 0) return 0;
+    
+    // Écrire n-1 = 2^s * d
+    Grandentier *n_minus_1 = sous_GrandEntier(n, ge_creer("1"));
+    int s = 0;
+    Grandentier *d = ge_copier(n_minus_1);
+    
+    while (d->Tdigts[d->Taille - 1] % 2 == 0) {
+        // Division par 2 (décalage à droite)
+        d->Tdigts[d->Taille - 1] = 0;
+        // Réorganiser les bits...
+        s++;
+    }
+    
+    // Test Miller-Rabin
+    for (int i = 0; i < iterations; i++) {
+        Grandentier *a = ge_creer("2"); // Base fixe pour simplification
+        Grandentier *x = ge_pow_mod(a, d, n);
+        
+        if (cmp_GrandEntier(x, ge_creer("1")) == 0 || 
+            cmp_GrandEntier(x, n_minus_1) == 0) {
+            ge_liberer(a);
+            ge_liberer(x);
+            continue;
+        }
+        
+        int continue_test = 0;
+        for (int j = 0; j < s - 1; j++) {
+            x = mul_GrandEntier(x, x);
+            Grandentier *x_mod = Grandentier_mod(x, n);
+            ge_liberer(x);
+            x = x_mod;
+            
+            if (cmp_GrandEntier(x, n_minus_1) == 0) {
+                continue_test = 1;
+                break;
+            }
+        }
+        
+        ge_liberer(a);
+        ge_liberer(x);
+        
+        if (!continue_test) {
+            ge_liberer(n_minus_1);
+            ge_liberer(d);
+            return 0; // Composé
         }
     }
-    return res;
+    
+    ge_liberer(n_minus_1);
+    ge_liberer(d);
+    return 1; // Probablement premier
 }
 
-// ---- Division (binaire simplifiée, retourne NULL si complexe) ----
-Grandentier* div_GrandEntier(const Grandentier *a,const Grandentier *b){
-    if(!a||!b) return NULL;
-    if(b->Taille==1 && b->Tdigts[0]==1) return ge_copier(a);
-    printf("Division complexe non implémentée.\n");
-    return NULL;
-}
-
-Grandentier* Grandentier_mod(const Grandentier* A, const Grandentier* B) {
-    if (!A || !B) return NULL;
-    if (B->Taille == 1 && B->Tdigts[0] == 0) return NULL; // division par zéro
-    Grandentier* reste = ge_copier(A);
-    while(cmp_GrandEntier(reste, B) >= 0) {
-        Grandentier* temp = reste;
-        reste = sous_GrandEntier(reste, B);
-        ge_liberer(temp);
+// ---- Génération de nombres premiers ----
+Grandentier* ge_generer_premier(int nb_bits) {
+    if (nb_bits < 2) return NULL;
+    
+    // Générer un nombre aléatoire de nb_bits
+    Grandentier *candidat = malloc(sizeof(Grandentier));
+    candidat->Taille = nb_bits;
+    candidat->Tdigts = malloc(nb_bits * sizeof(int));
+    candidat->Signe = 1;
+    
+    // Premier bit = 1, dernier bit = 1 (impair)
+    candidat->Tdigts[0] = 1;
+    candidat->Tdigts[nb_bits - 1] = 1;
+    
+    // Bits intermédiaires aléatoires (simplifié)
+    for (int i = 1; i < nb_bits - 1; i++) {
+        candidat->Tdigts[i] = rand() % 2;
     }
-    return reste;
+    
+    // Trouver le premier nombre premier
+    while (!ge_est_probablement_premier(candidat, 5)) {
+        // Incrémenter de 2 (rester impair)
+        Grandentier *two = ge_creer("10"); // 2 en binaire
+        Grandentier *temp = add_GrandEntier(candidat, two);
+        ge_liberer(candidat);
+        candidat = temp;
+        ge_liberer(two);
+    }
+    
+    return candidat;
 }
 
-
-// ---- Comparaison ----
-int cmp_GrandEntier(const Grandentier *a,const Grandentier *b){
-    if(!a||!b) return 0;
-    if(a->Taille>b->Taille) return 1;
-    if(a->Taille<b->Taille) return -1;
-    for(int i=0;i<a->Taille;i++){
-        if(a->Tdigts[i]>b->Tdigts[i]) return 1;
-        if(a->Tdigts[i]<b->Tdigts[i]) return -1;
+// ---- Conversion vers différentes bases ----
+char* ge_vers_hexadecimal(const Grandentier *g) {
+    if (!g) return NULL;
+    
+    // Conversion via binaire vers hexadécimal
+    int hex_len = (g->Taille + 3) / 4;
+    char *hex = malloc(hex_len + 1);
+    hex[hex_len] = '\0';
+    
+    for (int i = 0; i < hex_len; i++) {
+        int valeur = 0;
+        for (int j = 0; j < 4; j++) {
+            int pos = g->Taille - 1 - (i * 4 + j);
+            if (pos >= 0) {
+                valeur |= (g->Tdigts[pos] << j);
+            }
+        }
+        hex[hex_len - 1 - i] = (valeur < 10) ? ('0' + valeur) : ('A' + valeur - 10);
     }
-    return 0;
+    
+    return hex;
+}
+
+// ---- Opérations bit-à-bit ----
+Grandentier* ge_et_bitwise(const Grandentier *a, const Grandentier *b) {
+    if (!a || !b) return NULL;
+    
+    int taille = (a->Taille < b->Taille) ? a->Taille : b->Taille;
+    Grandentier *result = malloc(sizeof(Grandentier));
+    result->Taille = taille;
+    result->Tdigts = malloc(taille * sizeof(int));
+    result->Signe = 1;
+    
+    for (int i = 0; i < taille; i++) {
+        int pos_a = a->Taille - taille + i;
+        int pos_b = b->Taille - taille + i;
+        result->Tdigts[i] = a->Tdigts[pos_a] & b->Tdigts[pos_b];
+    }
+    
+    return result;
+}
+
+Grandentier* ge_ou_bitwise(const Grandentier *a, const Grandentier *b) {
+    if (!a || !b) return NULL;
+    
+    int taille = (a->Taille > b->Taille) ? a->Taille : b->Taille;
+    Grandentier *result = malloc(sizeof(Grandentier));
+    result->Taille = taille;
+    result->Tdigts = malloc(taille * sizeof(int));
+    result->Signe = 1;
+    
+    for (int i = 0; i < taille; i++) {
+        int bit_a = (i >= taille - a->Taille) ? a->Tdigts[i - (taille - a->Taille)] : 0;
+        int bit_b = (i >= taille - b->Taille) ? b->Tdigts[i - (taille - b->Taille)] : 0;
+        result->Tdigts[i] = bit_a | bit_b;
+    }
+    
+    return result;
 }
