@@ -3,134 +3,283 @@
 #include <string.h>
 #include "../include/grandentier.h"
 
-// Fonction pour saisir un Grandentier (détection automatique)
-Grandentier* saisir_grandentier(const char* prompt) {
+void afficherMenuPrincipal();
+void menuPhase1();
+void menuPhase2();
+void menuPhase3();
+
+GrandEntier* saisirGrandEntier(const char* prompt) {
     char input[256];
     while (1) {
         printf("%s", prompt);
         if (!fgets(input, sizeof(input), stdin)) continue;
-        input[strcspn(input, "\n")] = 0; // enlever le \n
-        Grandentier* g = ge_creer_auto(input);
-        if (!g) {
-            printf("Saisie invalide. Essayez de nouveau.\n");
+        input[strcspn(input, "\n")] = 0;
+
+        if (strlen(input) == 0) continue;
+
+        int valide = 1;
+        int start = 0;
+
+        // Permettre le signe '-' au début
+        if (input[0] == '-') {
+            start = 1;
+            if (strlen(input) == 1) {
+                valide = 0;
+            }
+        }
+
+        // Vérifier que le reste est bien binaire
+        for (int i = start; input[i]; i++) {
+            if (input[i] != '0' && input[i] != '1') {
+                valide = 0;
+                break;
+            }
+        }
+
+        if (!valide) {
+            printf("Erreur: Format invalide. Utilisez: -1010 ou 1010\n");
             continue;
         }
-        return g;
+
+        GrandEntier* ge = creerGrandEntierDepuisChaine(input);
+        if (!ge) {
+            printf("Erreur de creation du GrandEntier\n");
+            continue;
+        }
+        return ge;
     }
 }
 
-// Afficher un Grandentier
-void afficher_grandentier(Grandentier* g) {
-    if (!g) return;
-    printf("\nNombre : ");
-    ge_afficher(g);
-    ge_afficher_taille(g);
-    ge_afficher_signe(g);
+void afficherResultat(const GrandEntier *resultat, const char *operation) {
+    printf("\n=== %s ===\n", operation);
+    if (resultat) {
+        afficherGrandEntierDetail(resultat);
+    } else {
+        printf("Erreur lors du calcul\n");
+    }
+    printf("====================\n\n");
 }
 
-// Fonction pour demander création spécifique (cas menu 1)
-Grandentier* saisir_grandentier_menu1() {
-    char choix;
-    while (1) {
-        printf("Comment voulez-vous creer le nombre ? b = binaire, d = decimal, p = base^expo\nVotre choix : ");
-        if (scanf(" %c", &choix) != 1) continue;
-        while (getchar() != '\n'); // vider le buffer
-        if (choix=='b'||choix=='B'||choix=='d'||choix=='D'||choix=='p'||choix=='P') break;
-        printf("Saisie invalide.\n");
-    }
-
-    char input[256];
-    printf("Entrez la valeur : ");
-    if (!fgets(input, sizeof(input), stdin)) return NULL;
-    input[strcspn(input, "\n")] = 0;
-
-    switch (choix) {
-        case 'b': case 'B': return ge_creer_from_binary(input);
-        case 'd': case 'D': return ge_creer(input);
-        case 'p': case 'P': return ge_creer_puissance(input);
-        default: return NULL;
-    }
-}
-
-int main() {
+void menuPhase1() {
     int choix;
     do {
-        printf("\n--- Menu Principal ---\n");
-        printf("1. Creer et afficher un Grandentier\n");
-        printf("2. Additionner deux Grandentiers\n");
-        printf("3. Soustraire deux Grandentiers\n");
-        printf("4. Comparer deux Grandentiers\n");
-        printf("5. Multiplier deux Grandentiers\n");
-        printf("6. Diviser deux Grandentiers\n");
-        printf("7. Quitter\n");
-        printf("Votre choix : ");
+        printf("\n*** PHASE 1 - OPERATIONS DE BASE ***\n");
+        printf("1. Creer et afficher un GrandEntier\n");
+        printf("2. Addition\n");
+        printf("3. Soustraction\n");
+        printf("4. Comparaison\n");
+        printf("5. Retour au menu principal\n");
+        printf("Choix: ");
 
-        if (scanf("%d", &choix)!=1) { while(getchar()!='\n'); continue; }
-        while(getchar()!='\n');
+        scanf("%d", &choix);
+        getchar();
 
-        switch (choix) {
+        switch(choix) {
             case 1: {
-                Grandentier* g = saisir_grandentier_menu1();
-                if (!g) { printf("Erreur de création.\n"); break; }
-                afficher_grandentier(g);
-                ge_liberer(g);
+                GrandEntier *ge = saisirGrandEntier("Entrez une chaine binaire: ");
+                afficherGrandEntierDetail(ge);
+                libererGrandEntier(ge);
                 break;
             }
             case 2: {
-                Grandentier* a = saisir_grandentier("Premier nombre : ");
-                Grandentier* b = saisir_grandentier("Deuxieme nombre : ");
-                Grandentier* res = add_GrandEntier(a,b);
-                printf("\nResultat de l'addition :");
-                afficher_grandentier(res);
-                ge_liberer(a); ge_liberer(b); ge_liberer(res);
+                GrandEntier *a = saisirGrandEntier("Premier nombre binaire: ");
+                GrandEntier *b = saisirGrandEntier("Deuxieme nombre binaire: ");
+                GrandEntier *resultat = additionGrandEntier(a, b);
+                afficherResultat(resultat, "ADDITION");
+                libererGrandEntier(a);
+                libererGrandEntier(b);
+                libererGrandEntier(resultat);
                 break;
             }
             case 3: {
-                Grandentier* a = saisir_grandentier("Premier nombre : ");
-                Grandentier* b = saisir_grandentier("Deuxieme nombre : ");
-                Grandentier* res = sous_GrandEntier(a,b);
-                printf("\nResultat de la soustraction :");
-                afficher_grandentier(res);
-                ge_liberer(a); ge_liberer(b); ge_liberer(res);
+                GrandEntier *a = saisirGrandEntier("Premier nombre binaire: ");
+                GrandEntier *b = saisirGrandEntier("Deuxieme nombre binaire: ");
+                GrandEntier *resultat = soustractionGrandEntier(a, b);
+                afficherResultat(resultat, "SOUSTRACTION");
+                libererGrandEntier(a);
+                libererGrandEntier(b);
+                libererGrandEntier(resultat);
                 break;
             }
             case 4: {
-                Grandentier* a = saisir_grandentier("Premier nombre : ");
-                Grandentier* b = saisir_grandentier("Deuxieme nombre : ");
-                int cmp = cmp_GrandEntier(a,b);
-                if(cmp==0) printf("\nLes nombres sont egaux.\n");
-                else if(cmp>0) printf("\nLe premier nombre est plus grand.\n");
-                else printf("\nLe deuxieme nombre est plus grand.\n");
-                ge_liberer(a); ge_liberer(b);
-                break;
-            }
-            case 5: {
-                Grandentier* a = saisir_grandentier("Premier nombre : ");
-                Grandentier* b = saisir_grandentier("Deuxieme nombre : ");
-                Grandentier* res = mul_GrandEntier(a,b);
-                printf("\nResultat de la multiplication :");
-                afficher_grandentier(res);
-                ge_liberer(a); ge_liberer(b); ge_liberer(res);
-                break;
-            }
-            case 6: {
-                Grandentier* a = saisir_grandentier("Premier nombre : ");
-                Grandentier* b = saisir_grandentier("Deuxieme nombre : ");
-                Grandentier* res = div_GrandEntier(a,b);
-                if(res) {
-                    printf("\nResultat de la division :");
-                    afficher_grandentier(res);
-                    ge_liberer(res);
+                GrandEntier *a = saisirGrandEntier("Premier nombre binaire: ");
+                GrandEntier *b = saisirGrandEntier("Deuxieme nombre binaire: ");
+                int cmp = comparerGrandEntier(a, b);
+                if (cmp == 0) {
+                    printf("Les nombres sont EGAUX\n");
+                } else if (cmp == -1) {
+                    printf("Le premier nombre est PLUS PETIT\n");
                 } else {
-                    printf("Division non supportee.\n");
+                    printf("Le premier nombre est PLUS GRAND\n");
                 }
-                ge_liberer(a); ge_liberer(b);
+                libererGrandEntier(a);
+                libererGrandEntier(b);
                 break;
             }
-            case 7: printf("Au revoir !\n"); break;
-            default: printf("Choix invalide.\n");
+            case 5:
+                return;
+            default:
+                printf("Choix invalide!\n");
         }
-    } while(choix!=7);
+    } while (choix != 5);
+}
+
+void menuPhase2() {
+    int choix;
+    do {
+        printf("\n*** PHASE 2 - FONCTIONS AVANCEES ***\n");
+        printf("1. PGCD Binaire\n");
+        printf("2. Modulo\n");
+        printf("3. Exponentiation Modulaire\n");
+        printf("4. Multiplication Egyptienne\n");
+        printf("5. Retour au menu principal\n");
+        printf("Choix: ");
+
+        scanf("%d", &choix);
+        getchar();
+
+        switch(choix) {
+            case 1: {
+                GrandEntier *a = saisirGrandEntier("Premier nombre binaire: ");
+                GrandEntier *b = saisirGrandEntier("Deuxieme nombre binaire: ");
+                GrandEntier *resultat = pgcdBinaire(a, b);
+                afficherResultat(resultat, "PGCD BINAIRE");
+                libererGrandEntier(a);
+                libererGrandEntier(b);
+                libererGrandEntier(resultat);
+                break;
+            }
+            case 2: {
+                GrandEntier *a = saisirGrandEntier("Nombre: ");
+                GrandEntier *b = saisirGrandEntier("Modulo: ");
+                GrandEntier *resultat = moduloGrandEntier(a, b);
+                afficherResultat(resultat, "MODULO");
+                libererGrandEntier(a);
+                libererGrandEntier(b);
+                libererGrandEntier(resultat);
+                break;
+            }
+            case 3: {
+                GrandEntier *base = saisirGrandEntier("Base: ");
+                GrandEntier *mod = saisirGrandEntier("Modulo: ");
+                unsigned int exp;
+                printf("Exposant (entier non signe): ");
+                scanf("%u", &exp);
+                getchar();
+
+                GrandEntier *resultat = exponentiationModulaire(base, exp, mod);
+                afficherResultat(resultat, "EXPONENTIATION MODULAIRE");
+                libererGrandEntier(base);
+                libererGrandEntier(mod);
+                libererGrandEntier(resultat);
+                break;
+            }
+            case 4: {
+                GrandEntier *a = saisirGrandEntier("Premier facteur: ");
+                GrandEntier *b = saisirGrandEntier("Deuxieme facteur: ");
+                GrandEntier *resultat = multiplicationEgyptienne(a, b);
+                afficherResultat(resultat, "MULTIPLICATION EGYPTIENNE");
+                libererGrandEntier(a);
+                libererGrandEntier(b);
+                libererGrandEntier(resultat);
+                break;
+            }
+            case 5:
+                return;
+            default:
+                printf("Choix invalide!\n");
+        }
+    } while (choix != 5);
+}
+
+void menuPhase3() {
+    int choix;
+    do {
+        printf("\n*** PHASE 3 - BONUS RSA ***\n");
+        printf("1. Chiffrement RSA\n");
+        printf("2. Déchiffrement RSA\n");
+        printf("3. Retour au menu principal\n");
+        printf("Choix: ");
+
+        scanf("%d", &choix);
+        getchar();
+
+        switch(choix) {
+            case 1: {
+                GrandEntier *message = saisirGrandEntier("Message à chiffrer: ");
+                GrandEntier *n = saisirGrandEntier("Module RSA (n): ");
+                unsigned int e;
+                printf("Exposant public e: ");
+                scanf("%u", &e);
+                getchar();
+
+                GrandEntier *chiffre = chiffrementRSA(message, e, n);
+                afficherResultat(chiffre, "CHIFFREMENT RSA");
+                libererGrandEntier(message);
+                libererGrandEntier(n);
+                libererGrandEntier(chiffre);
+                break;
+            }
+            case 2: {
+                GrandEntier *chiffre = saisirGrandEntier("Message chiffre: ");
+                GrandEntier *n = saisirGrandEntier("Module RSA (n): ");
+                unsigned int d;
+                printf("Exposant prive d: ");
+                scanf("%u", &d);
+                getchar();
+
+                GrandEntier *message = dechiffrementRSA(chiffre, d, n);
+                afficherResultat(message, "DECHIFFREMENT RSA");
+                libererGrandEntier(chiffre);
+                libererGrandEntier(n);
+                libererGrandEntier(message);
+                break;
+            }
+            case 3:
+                return;
+            default:
+                printf("Choix invalide!\n");
+        }
+    } while (choix != 3);
+}
+
+void afficherMenuPrincipal() {
+    int choix;
+    do {
+        printf("\n========== GRANDS ENTIERS BINAIRES ==========\n");
+        printf("1. Phase 1 - Operations de base\n");
+        printf("2. Phase 2 - Fonctions avancees\n");
+        printf("3. Phase 3 - Bonus RSA\n");
+        printf("4. Quitter\n");
+        printf("Choix: ");
+
+        scanf("%d", &choix);
+        getchar();
+
+        switch(choix) {
+            case 1:
+                menuPhase1();
+                break;
+            case 2:
+                menuPhase2();
+                break;
+            case 3:
+                menuPhase3();
+                break;
+            case 4:
+                printf("Au revoir!\n");
+                break;
+            default:
+                printf("Choix invalide!\n");
+        }
+    } while (choix != 4);
+}
+
+int main() {
+    printf("=== PROJET GRANDS ENTIERS BINAIRES ===\n");
+    printf("Implementation conforme aux specifications\n\n");
+
+    afficherMenuPrincipal();
 
     return 0;
 }

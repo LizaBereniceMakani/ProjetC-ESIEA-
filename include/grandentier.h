@@ -1,35 +1,45 @@
 #ifndef GRANDENTIER_H
 #define GRANDENTIER_H
 
-#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+
+#define BASE 2
 
 typedef struct {
-    int *Tdigts;   // Tableau de bits (0 ou 1)
-    int Taille;    // Nombre de bits
-    int Signe;     // 1 = positif, 0 = zéro, -1 = négatif
-} Grandentier;
+    int *Tdigits;    // Tdigits[0] = MSB (bit de poids fort), Tdigits[Taille-1] = LSB
+    int Taille;      // Nombre de bits significatifs
+    int Signe;       // +1 positif, -1 négatif, 0 nul
+} GrandEntier;
 
-// Création
-Grandentier* ge_creer(const char *str);             // depuis un nombre décimal
-Grandentier* ge_creer_from_binary(const char *str); // depuis une chaîne binaire
-Grandentier* ge_creer_puissance(const char *str);   // base^exposant (ex: "2^100")
-Grandentier* ge_creer_auto(const char *input);      // détection automatique
+// Création et destruction
+GrandEntier* creerGrandEntier(int taille);
+GrandEntier* creerGrandEntierDepuisChaine(const char *chaine_binaire);
+GrandEntier* creerGrandEntierZero();
+GrandEntier* copierGrandEntier(const GrandEntier *ge);
+void libererGrandEntier(GrandEntier *ge);
 
 // Affichage
-void ge_afficher(const Grandentier *g);
-void ge_afficher_taille(const Grandentier *g);
-void ge_afficher_signe(const Grandentier *g);
+void afficherGrandEntier(const GrandEntier *ge);
+void afficherGrandEntierDetail(const GrandEntier *ge);
 
-// Libération
-void ge_liberer(Grandentier *g);
+// Opérations de base (Phase 1)
+GrandEntier* additionGrandEntier(const GrandEntier *a, const GrandEntier *b);
+GrandEntier* soustractionGrandEntier(const GrandEntier *a, const GrandEntier *b);
+int comparerGrandEntier(const GrandEntier *a, const GrandEntier *b);
 
-// Opérations arithmétiques
-Grandentier* add_GrandEntier(const Grandentier *a, const Grandentier *b);
-Grandentier* sous_GrandEntier(const Grandentier *a, const Grandentier *b);
-Grandentier* mul_GrandEntier(const Grandentier *a, const Grandentier *b);
-Grandentier* div_GrandEntier(const Grandentier *a, const Grandentier *b);
+// Opérations utilitaires
+void diviserParDeux(GrandEntier *ge);
+GrandEntier* multiplicationEgyptienne(const GrandEntier *a, const GrandEntier *b);
 
-// Comparaison (-1 si a<b, 0 si a==b, 1 si a>b)
-int cmp_GrandEntier(const Grandentier *a, const Grandentier *b);
+// Phase 2 - Fonctions avancées
+GrandEntier* pgcdBinaire(const GrandEntier *a, const GrandEntier *b);
+GrandEntier* moduloGrandEntier(const GrandEntier *a, const GrandEntier *b);
+GrandEntier* exponentiationModulaire(const GrandEntier *base, unsigned int exposant, const GrandEntier *mod);
 
-#endif // GRANDENTIER_H
+// Phase 3 - Bonus RSA
+GrandEntier* chiffrementRSA(const GrandEntier *message, unsigned int e, const GrandEntier *n);
+GrandEntier* dechiffrementRSA(const GrandEntier *chiffre, unsigned int d, const GrandEntier *n);
+
+#endif

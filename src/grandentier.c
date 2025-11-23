@@ -1,208 +1,492 @@
 #include "../include/grandentier.h"
-#include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
 #include <ctype.h>
 
-// ---- Création depuis binaire ----
-Grandentier* ge_creer_from_binary(const char *str) {
-    if (!str) return NULL;
-    size_t len = strlen(str);
-    Grandentier* g = malloc(sizeof(Grandentier));
-    g->Tdigts = malloc(len * sizeof(int));
-    g->Taille = len;
-    g->Signe = 0;
+// ==================== CRÉATION ET DESTRUCTION ====================
 
-    int allZero = 1;
-    for (size_t i = 0; i < len; i++) {
-        if (str[i] == '0') g->Tdigts[i] = 0;
-        else if (str[i] == '1') { g->Tdigts[i] = 1; allZero = 0; }
-        else { free(g->Tdigts); free(g); return NULL; }
+GrandEntier* creerGrandEntier(int taille) {
+    GrandEntier *ge = (GrandEntier*)malloc(sizeof(GrandEntier));
+    ge->Taille = taille;
+    ge->Signe = 0;
+    ge->Tdigits = (int*)malloc(taille * sizeof(int));
+    for (int i = 0; i < taille; i++) {
+        ge->Tdigits[i] = 0;
     }
-    if (!allZero) g->Signe = 1;
-    return g;
+    return ge;
 }
 
-// ---- Création depuis décimal ----
-Grandentier* ge_creer(const char *str) {
-    if (!str) return NULL;
-    int sign = 1;
-    size_t start = 0;
-    if (str[0] == '-') { sign = -1; start = 1; }
-    else if (str[0] == '+') start = 1;
+GrandEntier* creerGrandEntierDepuisChaine(const char *chaine_binaire) {
+    if (!chaine_binaire) return NULL;
 
-    if (strcmp(str + start, "0") == 0) {
-        Grandentier* g = malloc(sizeof(Grandentier));
-        g->Taille = 1;
-        g->Tdigts = malloc(sizeof(int));
-        g->Tdigts[0] = 0;
-        g->Signe = 0;
-        return g;
+    int signe = 1;
+    int start = 0;
+
+    // Gérer le signe
+    if (chaine_binaire[0] == '-') {
+        signe = -1;
+        start = 1;
+    } else if (chaine_binaire[0] == '+') {
+        start = 1;
     }
 
-    char* temp = strdup(str + start);
-    int capacity = strlen(temp) * 4;
-    int* bits = malloc(capacity * sizeof(int));
-    int bitCount = 0;
-
-    while (strlen(temp) > 0 && strcmp(temp, "0") != 0) {
-        int carry = 0;
-        size_t len = strlen(temp);
-        for (size_t i = 0; i < len; i++) {
-            int cur = carry * 10 + (temp[i] - '0');
-            temp[i] = (cur / 2) + '0';
-            carry = cur % 2;
+    // Compter les bits valides
+    int n = strlen(chaine_binaire);
+    int taille = 0;
+    for (int i = start; i < n; i++) {
+        if (chaine_binaire[i] == '0' || chaine_binaire[i] == '1') {
+            taille++;
         }
-        bits[bitCount++] = carry;
-        size_t newStart = 0;
-        while (newStart < len && temp[newStart] == '0') newStart++;
-        if (newStart > 0) memmove(temp, temp+newStart, len-newStart+1);
     }
 
-    Grandentier* g = malloc(sizeof(Grandentier));
-    g->Taille = bitCount;
-    g->Tdigts = malloc(bitCount * sizeof(int));
-    g->Signe = sign;
-    for (int i = 0; i < bitCount; i++) g->Tdigts[i] = bits[bitCount - 1 - i];
+    if (taille == 0) return creerGrandEntierZero();
 
-    free(bits); free(temp);
-    return g;
+    GrandEntier *ge = creerGrandEntier(taille);
+    ge->Signe = signe;
+
+    // Remplir le tableau
+    int index = 0;
+    int tousZeros = 1;
+    for (int i = start; i < n; i++) {
+        if (chaine_binaire[i] == '0' || chaine_binaire[i] == '1') {
+            ge->Tdigits[index] = chaine_binaire[i] - '0';
+            if (ge->Tdigits[index] == 1) tousZeros = 0;
+            index++;
+        }
+    }
+
+    // Supprimer les zéros non significatifs à gauche
+    int debut = 0;
+    while (debut < ge->Taille - 1 && ge->Tdigits[debut] == 0) {
+        debut++;
+    }
+
+    if (debut > 0) {
+        int nouvelle_taille = ge->Taille - debut;
+        int *nouveaux_digits = (int*)malloc(nouvelle_taille * sizeof(int));
+        for (int i = 0; i < nouvelle_taille; i++) {
+            nouveaux_digits[i] = ge->Tdigits[debut + i];
+        }
+        free(ge->Tdigits);
+        ge->Tdigits = nouveaux_digits;
+        ge->Taille = nouvelle_taille;
+    }
+
+    if (tousZeros) {
+        ge->Signe = 0;
+        if (ge->Taille > 1) {
+            free(ge->Tdigits);
+            ge->Tdigits = (int*)malloc(sizeof(int));
+            ge->Tdigits[0] = 0;
+            ge->Taille = 1;
+        }
+    }
+
+    return ge;
 }
 
-// ---- Création depuis base^expo (ex: "2^34") ----
-Grandentier* ge_creer_puissance(const char *str) {
-    int base=0, expo=0;
-    if (sscanf(str, "%d^%d", &base, &expo) != 2) return NULL;
-    if (base != 2 || expo < 0) return NULL;
-
-    Grandentier* g = malloc(sizeof(Grandentier));
-    g->Taille = expo + 1;
-    g->Tdigts = calloc(g->Taille, sizeof(int));
-    g->Tdigts[0] = 1;
-    g->Signe = 1;
-    return g;
+GrandEntier* creerGrandEntierZero() {
+    GrandEntier *ge = creerGrandEntier(1);
+    ge->Tdigits[0] = 0;
+    ge->Signe = 0;
+    return ge;
 }
 
-// ---- Détection automatique ----
-Grandentier* ge_creer_auto(const char *input) {
-    if (strchr(input,'^')) return ge_creer_puissance(input);
-
-    int isBinary = 1;
-    for (size_t i=0;i<strlen(input);i++)
-        if (input[i]!='0' && input[i]!='1') { isBinary=0; break; }
-
-    if (isBinary) return ge_creer_from_binary(input);
-    return ge_creer(input);
+GrandEntier* copierGrandEntier(const GrandEntier *ge) {
+    if (!ge) return NULL;
+    GrandEntier *copie = creerGrandEntier(ge->Taille);
+    copie->Signe = ge->Signe;
+    for (int i = 0; i < ge->Taille; i++) {
+        copie->Tdigits[i] = ge->Tdigits[i];
+    }
+    return copie;
 }
 
-// ---- Affichage ----
-void ge_afficher(const Grandentier *g) {
-    if (!g) return;
-    if (g->Signe==0) { printf("0\n"); return; }
-    if (g->Signe==-1) printf("-");
-    for (int i=0;i<g->Taille;i++) printf("%d",g->Tdigts[i]);
+void libererGrandEntier(GrandEntier *ge) {
+    if (!ge) return;
+    if (ge->Tdigits) free(ge->Tdigits);
+    free(ge);
+}
+
+// ==================== AFFICHAGE ====================
+
+void afficherGrandEntier(const GrandEntier *ge) {
+    if (!ge) {
+        printf("NULL\n");
+        return;
+    }
+
+    if (ge->Signe == -1) printf("-");
+    if (ge->Signe == 0) {
+        printf("0\n");
+        return;
+    }
+
+    for (int i = 0; i < ge->Taille; i++) {
+        printf("%d", ge->Tdigits[i]);
+    }
     printf("\n");
 }
 
-void ge_afficher_taille(const Grandentier *g){if(g) printf("%d bits\n",g->Taille);}
-void ge_afficher_signe(const Grandentier *g){if(g) printf("Signe: %d\n",g->Signe);}
+void afficherGrandEntierDetail(const GrandEntier *ge) {
+    if (!ge) {
+        printf("GrandEntier: NULL\n");
+        return;
+    }
 
-// ---- Libération ----
-void ge_liberer(Grandentier *g){if(g){free(g->Tdigts); free(g);}}
-
-// ---- Copier ----
-static Grandentier* ge_copier(const Grandentier *g){
-    if(!g) return NULL;
-    Grandentier* c = malloc(sizeof(Grandentier));
-    c->Taille = g->Taille;
-    c->Signe = g->Signe;
-    c->Tdigts = malloc(c->Taille*sizeof(int));
-    for(int i=0;i<c->Taille;i++) c->Tdigts[i] = g->Tdigts[i];
-    return c;
+    printf("Signe: %d\n", ge->Signe);
+    printf("Taille: %d bits\n", ge->Taille);
+    printf("Valeur binaire: ");
+    afficherGrandEntier(ge);
 }
 
-// ---- Addition ----
-Grandentier* add_GrandEntier(const Grandentier *a,const Grandentier *b){
-    if(!a) return ge_copier(b);
-    if(!b) return ge_copier(a);
-    int taille = (a->Taille>b->Taille?a->Taille:b->Taille)+1;
-    int* resbits = calloc(taille,sizeof(int));
-    for(int i=0;i<a->Taille;i++) resbits[taille - i -1] += a->Tdigts[a->Taille - i -1];
-    for(int i=0;i<b->Taille;i++) resbits[taille - i -1] += b->Tdigts[b->Taille - i -1];
-    for(int i=taille-1;i>0;i--){
-        if(resbits[i]>=2){resbits[i]-=2; resbits[i-1]++;}
-    }
-    int start=0; while(start<taille-1 && resbits[start]==0) start++;
-    Grandentier* res=malloc(sizeof(Grandentier));
-    res->Taille = taille - start;
-    res->Tdigts = malloc(res->Taille*sizeof(int));
-    for(int i=0;i<res->Taille;i++) res->Tdigts[i]=resbits[start+i];
-    res->Signe=1;
-    free(resbits);
-    return res;
-}
+// ==================== COMPARAISON ====================
 
-// ---- Soustraction (binaire simple, a>=b) ----
-Grandentier* sous_GrandEntier(const Grandentier *a,const Grandentier *b){
-    // Complément à 2 simplifié
-    Grandentier* res=ge_copier(a);
-    int borrow=0;
-    for(int i=0;i<res->Taille;i++){
-        int bi=(i<b->Taille)?b->Tdigts[b->Taille-1-i]:0;
-        int ai=res->Tdigts[res->Taille-1-i]-borrow;
-        if(ai<bi){ai+=2; borrow=1;} else borrow=0;
-        res->Tdigts[res->Taille-1-i]=ai-bi;
-    }
-    // Normaliser taille
-    int start=0; while(start<res->Taille-1 && res->Tdigts[start]==0) start++;
-    if(start>0){
-        int newT=res->Taille-start;
-        int* newBits=malloc(newT*sizeof(int));
-        for(int i=0;i<newT;i++) newBits[i]=res->Tdigts[start+i];
-        free(res->Tdigts); res->Tdigts=newBits; res->Taille=newT;
-    }
-    return res;
-}
+int comparerGrandEntier(const GrandEntier *a, const GrandEntier *b) {
+    if (!a || !b) return 0;
 
-// ---- Multiplication ----
-Grandentier* mul_GrandEntier(const Grandentier *a,const Grandentier *b){
-    if(!a||!b) return NULL;
-    Grandentier* res=ge_creer("0");
-    for(int i=b->Taille-1;i>=0;i--){
-        if(b->Tdigts[i]==1){
-            Grandentier* temp=ge_copier(a);
-            int shift=b->Taille-1-i;
-            Grandentier* shifted=malloc(sizeof(Grandentier));
-            shifted->Taille=temp->Taille+shift;
-            shifted->Tdigts=calloc(shifted->Taille,sizeof(int));
-            for(int j=0;j<temp->Taille;j++)
-                shifted->Tdigts[j]=temp->Tdigts[j];
-            for(int j=0;j<shift;j++) shifted->Tdigts[shifted->Taille-1-j]=0;
-            shifted->Signe=1;
-            Grandentier* sum=add_GrandEntier(res,shifted);
-            ge_liberer(res); ge_liberer(temp); ge_liberer(shifted);
-            res=sum;
-        }
-    }
-    return res;
-}
+    if (a->Signe < b->Signe) return -1;
+    if (a->Signe > b->Signe) return 1;
 
-// ---- Division (binaire simplifiée, retourne NULL si complexe) ----
-Grandentier* div_GrandEntier(const Grandentier *a,const Grandentier *b){
-    if(!a||!b) return NULL;
-    if(b->Taille==1 && b->Tdigts[0]==1) return ge_copier(a);
-    printf("Division complexe non implémentée.\n");
-    return NULL;
-}
-
-// ---- Comparaison ----
-int cmp_GrandEntier(const Grandentier *a,const Grandentier *b){
-    if(!a||!b) return 0;
-    if(a->Taille>b->Taille) return 1;
-    if(a->Taille<b->Taille) return -1;
-    for(int i=0;i<a->Taille;i++){
-        if(a->Tdigts[i]>b->Tdigts[i]) return 1;
-        if(a->Tdigts[i]<b->Tdigts[i]) return -1;
+    if (a->Taille != b->Taille) {
+        if (a->Taille < b->Taille) return (a->Signe >= 0) ? -1 : 1;
+        if (a->Taille > b->Taille) return (a->Signe >= 0) ? 1 : -1;
     }
+
+    for (int i = 0; i < a->Taille; i++) {
+        if (a->Tdigits[i] < b->Tdigits[i]) return (a->Signe >= 0) ? -1 : 1;
+        if (a->Tdigits[i] > b->Tdigits[i]) return (a->Signe >= 0) ? 1 : -1;
+    }
+
     return 0;
+}
+
+// ==================== ADDITION ====================
+
+GrandEntier* additionGrandEntier(const GrandEntier *a, const GrandEntier *b) {
+    if (!a || !b) return NULL;
+
+    if (a->Signe == 0) return copierGrandEntier(b);
+    if (b->Signe == 0) return copierGrandEntier(a);
+
+    // Pour l'instant, on suppose que a et b sont positifs
+    if (a->Signe == -1 || b->Signe == -1) {
+        printf("ERREUR: Addition non implémentée pour les négatifs\n");
+        return NULL;
+    }
+
+    int taille_max = (a->Taille > b->Taille) ? a->Taille : b->Taille;
+    GrandEntier *resultat = creerGrandEntier(taille_max + 1);
+    resultat->Signe = 1;
+
+    int retenue = 0;
+    int idx_a = a->Taille - 1;
+    int idx_b = b->Taille - 1;
+    int idx_res = resultat->Taille - 1;
+
+    while (idx_res >= 0) {
+        int bit_a = (idx_a >= 0) ? a->Tdigits[idx_a] : 0;
+        int bit_b = (idx_b >= 0) ? b->Tdigits[idx_b] : 0;
+
+        int somme = bit_a + bit_b + retenue;
+        resultat->Tdigits[idx_res] = somme % 2;
+        retenue = somme / 2;
+
+        idx_a--;
+        idx_b--;
+        idx_res--;
+    }
+
+    if (resultat->Tdigits[0] == 0 && resultat->Taille > 1) {
+        int nouvelle_taille = resultat->Taille - 1;
+        int *nouveaux_digits = (int*)malloc(nouvelle_taille * sizeof(int));
+        for (int i = 0; i < nouvelle_taille; i++) {
+            nouveaux_digits[i] = resultat->Tdigits[i + 1];
+        }
+        free(resultat->Tdigits);
+        resultat->Tdigits = nouveaux_digits;
+        resultat->Taille = nouvelle_taille;
+    }
+
+    return resultat;
+}
+
+// ==================== SOUSTRACTION ====================
+
+GrandEntier* soustractionGrandEntier(const GrandEntier *a, const GrandEntier *b) {
+    if (!a || !b) return NULL;
+
+    int comparaison = comparerGrandEntier(a, b);
+
+    if (comparaison == 0) {
+        return creerGrandEntierZero();
+    }
+
+    if (comparaison == -1) {
+        GrandEntier *temp = soustractionGrandEntier(b, a);
+        if (temp) temp->Signe = -1;
+        return temp;
+    }
+
+    GrandEntier *resultat = creerGrandEntier(a->Taille);
+    resultat->Signe = 1;
+
+    int emprunt = 0;
+    int idx_a = a->Taille - 1;
+    int idx_b = b->Taille - 1;
+    int idx_res = resultat->Taille - 1;
+
+    while (idx_res >= 0) {
+        int bit_a = (idx_a >= 0) ? a->Tdigits[idx_a] : 0;
+        int bit_b = (idx_b >= 0) ? b->Tdigits[idx_b] : 0;
+
+        int difference = bit_a - bit_b - emprunt;
+        if (difference < 0) {
+            difference += 2;
+            emprunt = 1;
+        } else {
+            emprunt = 0;
+        }
+
+        resultat->Tdigits[idx_res] = difference;
+
+        idx_a--;
+        idx_b--;
+        idx_res--;
+    }
+
+    int debut = 0;
+    while (debut < resultat->Taille - 1 && resultat->Tdigits[debut] == 0) {
+        debut++;
+    }
+
+    if (debut > 0) {
+        int nouvelle_taille = resultat->Taille - debut;
+        int *nouveaux_digits = (int*)malloc(nouvelle_taille * sizeof(int));
+        for (int i = 0; i < nouvelle_taille; i++) {
+            nouveaux_digits[i] = resultat->Tdigits[debut + i];
+        }
+        free(resultat->Tdigits);
+        resultat->Tdigits = nouveaux_digits;
+        resultat->Taille = nouvelle_taille;
+    }
+
+    return resultat;
+}
+
+// ==================== OPÉRATIONS UTILITAIRES ====================
+
+void diviserParDeux(GrandEntier *ge) {
+    if (!ge || ge->Signe == 0) return;
+
+    if (ge->Taille == 1) {
+        ge->Tdigits[0] = 0;
+        ge->Signe = 0;
+        return;
+    }
+
+    int nouvelle_taille = ge->Taille - 1;
+    int *nouveaux_digits = (int*)malloc(nouvelle_taille * sizeof(int));
+    for (int i = 0; i < nouvelle_taille; i++) {
+        nouveaux_digits[i] = ge->Tdigits[i];
+    }
+    free(ge->Tdigits);
+    ge->Tdigits = nouveaux_digits;
+    ge->Taille = nouvelle_taille;
+}
+
+// ==================== FONCTIONS AVANCÉES ====================
+
+GrandEntier* multiplicationEgyptienne(const GrandEntier *a, const GrandEntier *b) {
+    if (!a || !b) return NULL;
+
+    if (a->Signe == 0 || b->Signe == 0) {
+        return creerGrandEntierZero();
+    }
+
+    GrandEntier *resultat = creerGrandEntierZero();
+    GrandEntier *multiplicande = copierGrandEntier(a);
+    GrandEntier *multiplicateur = copierGrandEntier(b);
+
+    while (multiplicateur->Signe != 0) {
+        if (multiplicateur->Tdigits[multiplicateur->Taille - 1] == 1) {
+            GrandEntier *nouveau_resultat = additionGrandEntier(resultat, multiplicande);
+            libererGrandEntier(resultat);
+            resultat = nouveau_resultat;
+        }
+
+        GrandEntier *nouveau_multiplicande = creerGrandEntier(multiplicande->Taille + 1);
+        nouveau_multiplicande->Signe = multiplicande->Signe;
+        for (int i = 0; i < multiplicande->Taille; i++) {
+            nouveau_multiplicande->Tdigits[i] = multiplicande->Tdigits[i];
+        }
+        nouveau_multiplicande->Tdigits[multiplicande->Taille] = 0;
+        libererGrandEntier(multiplicande);
+        multiplicande = nouveau_multiplicande;
+
+        diviserParDeux(multiplicateur);
+    }
+
+    libererGrandEntier(multiplicande);
+    libererGrandEntier(multiplicateur);
+
+    return resultat;
+}
+
+GrandEntier* pgcdBinaire(const GrandEntier *a, const GrandEntier *b) {
+    if (!a || !b) return NULL;
+
+    GrandEntier *u = copierGrandEntier(a);
+    GrandEntier *v = copierGrandEntier(b);
+
+    if (u->Signe == 0) {
+        libererGrandEntier(u);
+        return v;
+    }
+    if (v->Signe == 0) {
+        libererGrandEntier(v);
+        return u;
+    }
+
+    int k = 0;
+    GrandEntier *temp_u = copierGrandEntier(u);
+    GrandEntier *temp_v = copierGrandEntier(v);
+
+    while (temp_u->Tdigits[temp_u->Taille-1] == 0 && temp_v->Tdigits[temp_v->Taille-1] == 0) {
+        diviserParDeux(temp_u);
+        diviserParDeux(temp_v);
+        k++;
+    }
+
+    GrandEntier *resultat = NULL;
+
+    while (temp_v->Signe != 0) {
+        while (temp_v->Tdigits[temp_v->Taille-1] == 0) {
+            diviserParDeux(temp_v);
+        }
+
+        if (comparerGrandEntier(temp_u, temp_v) == -1) {
+            GrandEntier *temp = temp_u;
+            temp_u = temp_v;
+            temp_v = temp;
+        }
+
+        GrandEntier *nouveau_u = soustractionGrandEntier(temp_u, temp_v);
+        libererGrandEntier(temp_u);
+        temp_u = nouveau_u;
+    }
+
+    resultat = copierGrandEntier(temp_u);
+    for (int i = 0; i < k; i++) {
+        GrandEntier *temp = creerGrandEntier(resultat->Taille + 1);
+        temp->Signe = resultat->Signe;
+        for (int j = 0; j < resultat->Taille; j++) {
+            temp->Tdigits[j] = resultat->Tdigits[j];
+        }
+        temp->Tdigits[resultat->Taille] = 0;
+        libererGrandEntier(resultat);
+        resultat = temp;
+    }
+
+    libererGrandEntier(temp_u);
+    libererGrandEntier(temp_v);
+    libererGrandEntier(u);
+    libererGrandEntier(v);
+
+    return resultat;
+}
+
+GrandEntier* moduloGrandEntier(const GrandEntier *a, const GrandEntier *b) {
+    if (!a || !b || b->Signe == 0) return NULL;
+
+    if (comparerGrandEntier(a, b) == -1) {
+        return copierGrandEntier(a);
+    }
+
+    if (comparerGrandEntier(a, b) == 0) {
+        return creerGrandEntierZero();
+    }
+
+    GrandEntier *resultat = copierGrandEntier(a);
+    GrandEntier *temp_b = copierGrandEntier(b);
+
+    while (comparerGrandEntier(resultat, temp_b) != -1) {
+        GrandEntier *nouveau_temp_b = creerGrandEntier(temp_b->Taille + 1);
+        nouveau_temp_b->Signe = temp_b->Signe;
+        for (int i = 0; i < temp_b->Taille; i++) {
+            nouveau_temp_b->Tdigits[i] = temp_b->Tdigits[i];
+        }
+        nouveau_temp_b->Tdigits[temp_b->Taille] = 0;
+        libererGrandEntier(temp_b);
+        temp_b = nouveau_temp_b;
+    }
+
+    diviserParDeux(temp_b);
+
+    while (comparerGrandEntier(resultat, b) != -1) {
+        if (comparerGrandEntier(temp_b, resultat) == 1) {
+            diviserParDeux(temp_b);
+            continue;
+        }
+
+        GrandEntier *nouveau_resultat = soustractionGrandEntier(resultat, temp_b);
+        libererGrandEntier(resultat);
+        resultat = nouveau_resultat;
+    }
+
+    libererGrandEntier(temp_b);
+    return resultat;
+}
+
+GrandEntier* exponentiationModulaire(const GrandEntier *base, unsigned int exposant, const GrandEntier *mod) {
+    if (!base || !mod || mod->Signe == 0) return NULL;
+
+    if (exposant == 0) {
+        GrandEntier *un = creerGrandEntierDepuisChaine("1");
+        GrandEntier *resultat = moduloGrandEntier(un, mod);
+        libererGrandEntier(un);
+        return resultat;
+    }
+
+    GrandEntier *resultat = creerGrandEntierDepuisChaine("1");
+    GrandEntier *base_temp = moduloGrandEntier(base, mod);
+
+    while (exposant > 0) {
+        if (exposant % 2 == 1) {
+            GrandEntier *temp = multiplicationEgyptienne(resultat, base_temp);
+            GrandEntier *nouveau_resultat = moduloGrandEntier(temp, mod);
+            libererGrandEntier(resultat);
+            libererGrandEntier(temp);
+            resultat = nouveau_resultat;
+        }
+
+        GrandEntier *carre = multiplicationEgyptienne(base_temp, base_temp);
+        GrandEntier *nouvelle_base = moduloGrandEntier(carre, mod);
+        libererGrandEntier(base_temp);
+        libererGrandEntier(carre);
+        base_temp = nouvelle_base;
+
+        exposant /= 2;
+    }
+
+    libererGrandEntier(base_temp);
+    return resultat;
+}
+
+// ==================== BONUS RSA ====================
+
+GrandEntier* chiffrementRSA(const GrandEntier *message, unsigned int e, const GrandEntier *n) {
+    if (!message || !n) return NULL;
+
+    if (comparerGrandEntier(message, n) != -1) {
+        printf("ERREUR: Message trop grand pour le module RSA\n");
+        return NULL;
+    }
+
+    return exponentiationModulaire(message, e, n);
+}
+
+GrandEntier* dechiffrementRSA(const GrandEntier *chiffre, unsigned int d, const GrandEntier *n) {
+    if (!chiffre || !n) return NULL;
+
+    return exponentiationModulaire(chiffre, d, n);
 }
